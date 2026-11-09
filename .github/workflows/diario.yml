@@ -21,9 +21,8 @@ jobs:
       - name: Pruebas sobre el código del repositorio
         run: npm test
       - name: Pruebas sobre el sitio publicado
-        if: ${{ vars.SITE_URL != '' }}
         env:
-          BASE_URL: ${{ vars.SITE_URL }}
+          BASE_URL: ${{ vars.SITE_URL || 'https://711-taxi-rapa-nui.netlify.app' }}
         run: npm test
       - name: Vulnerabilidades conocidas en dependencias
         run: npm audit --audit-level=high

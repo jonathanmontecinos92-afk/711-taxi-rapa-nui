@@ -1,5 +1,5 @@
 name: Disponibilidad
-# Comprueba que la app publicada responda. Requiere la variable de repositorio SITE_URL.
+# Comprueba que la app publicada responda. La variable de repositorio SITE_URL permite cambiar la dirección.
 on:
   schedule:
     - cron: "*/30 * * * *"
@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     env:
-      SITE_URL: ${{ vars.SITE_URL }}
+      SITE_URL: ${{ vars.SITE_URL || 'https://711-taxi-rapa-nui.netlify.app' }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Comprobar respuesta

@@ -1,0 +1,13 @@
+{
+  "name": "711-taxi-rapa-nui",
+  "version": "0.13.0",
+  "private": true,
+  "description": "Prototipo de la central digital 711 Taxi Rapa Nui",
+  "scripts": {
+    "test": "node tests/run.js",
+    "serve": "npx --yes serve -l 4173 ."
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

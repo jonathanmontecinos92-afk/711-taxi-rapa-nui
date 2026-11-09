@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#063B83">
+<meta name="description" content="711 Taxi Rapa Nui: prototipo de la central digital de taxis.">
+<style>html{color-scheme:light}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>711 Taxi Rapa Nui</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: a la izquierda quien pide (pasajero, hotel o admin); a la derecha el teléfono del taxista. En celular, pestañas y una vista a la vez */
+:root{
+  --bg:#ffffff; --panel:#f4f8f5; --ink:#12241c; --muted:#586a61; --line:#d6e2db;
+  --accent:#0a8f5b; --on-accent:#ffffff; --accent-soft:#e2f4eb;
+  --ok:#14a44d; --stop:#d62f2f; --ring:#ffd21f; --trip:#1f5fd6; --off:#5f6b74; --warn:#b26a00;
+  --cash:#14a44d; --card:#1f5fd6; --transfer:#7b3fd1;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1411; --panel:#15201b; --ink:#e7f0eb; --muted:#9bb0a5; --line:#27362e;
+  --accent:#35c98a; --on-accent:#06281a; --accent-soft:#173327; --warn:#f0b24a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1411; --panel:#15201b; --ink:#e7f0eb; --muted:#9bb0a5; --line:#27362e;
+  --accent:#35c98a; --on-accent:#06281a; --accent-soft:#173327; --warn:#f0b24a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header h1{font-family:var(--display);font-weight:800;font-size:clamp(30px,5vw,42px);margin:0;line-height:1;text-wrap:balance}
+header h1 span{color:var(--accent)}
+header p{margin:6px 0 0;color:var(--muted);max-width:64ch}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:3px 8px;border-radius:99px;margin-bottom:8px}
+.tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px}
+.tabs button{flex:1;border:0;background:none;font:600 14px var(--body);color:var(--muted);padding:10px 4px;border-radius:9px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--on-accent)}
+.phones{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+.col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.col h2{font:700 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
+.phone{position:relative;background:var(--bg);border:1px solid var(--line);border-radius:26px;height:780px;overflow:hidden;display:flex;flex-direction:column}
+@media (min-width:821px){#tab-d{display:none}}
+@media (max-width:820px){
+  .phones{grid-template-columns:1fr}
+  .col[data-hidden="true"]{display:none}
+  .phone{height:auto;min-height:700px}
+}
+button{font-family:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.help{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px;display:flex;flex-wrap:wrap;gap:6px 20px;align-items:center;font-size:13px;color:var(--muted)}
+.help label{display:flex;gap:8px;align-items:center;color:var(--ink);font-weight:600;cursor:pointer}
+
+/* ---------- vistas claras (pasajero, hotel, admin) ---------- */
+.top{padding:18px 20px 14px;border-bottom:1px solid var(--line)}
+.brandrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.brand{font:800 22px var(--display);line-height:1}
+.brand span{color:var(--accent)}
+.langs{display:flex;gap:4px}
+.langs button{border:1px solid var(--line);background:var(--bg);color:var(--muted);font:700 12px var(--body);padding:5px 8px;border-radius:8px;cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.live{display:flex;align-items:center;gap:10px;margin-top:12px;background:var(--accent-soft);border-radius:14px;padding:10px 14px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(20,164,77,.6);animation:pulse 1.8s infinite;flex:none}
+@keyframes pulse{70%{box-shadow:0 0 0 9px rgba(20,164,77,0)}100%{box-shadow:0 0 0 0 rgba(20,164,77,0)}}
+.live b{font:800 26px var(--display);font-variant-numeric:tabular-nums}
+.body{flex:1;overflow:auto;padding:16px 20px 22px;display:flex;flex-direction:column;gap:14px}
+.cta{border:0;border-radius:18px;padding:18px 18px;text-align:left;cursor:pointer;font:800 26px var(--display);letter-spacing:.02em;text-transform:uppercase;line-height:1.05;width:100%}
+.cta small{display:block;font:500 13.5px var(--body);text-transform:none;letter-spacing:0;margin-top:5px;opacity:.9}
+.cta.now{background:var(--accent);color:var(--on-accent)}
+.cta.res{background:var(--bg);color:var(--ink);border:2px solid var(--accent)}
+.linkbtn{background:none;border:0;color:var(--accent);font:700 14px var(--body);cursor:pointer;padding:4px 0;text-align:left}
+.ref h3,.sec h3{font:700 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+td,th{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:700}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:700}
+.scroll{overflow-x:auto}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label,.flabel{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+select,input[type=text],input[type=tel],input[type=date],input[type=time],input[type=number]{font:500 16px var(--body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:11px;width:100%;min-width:0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chk{display:flex;gap:10px;align-items:center;font-weight:600;cursor:pointer}
+.chk input{width:20px;height:20px;accent-color:var(--accent)}
+.stepper{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:12px;padding:4px}
+.stepper button{width:40px;height:40px;border:0;border-radius:9px;background:var(--accent-soft);color:var(--ink);font-size:22px;font-weight:700;cursor:pointer}
+.stepper output{font:700 20px var(--body);font-variant-numeric:tabular-nums}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.pays{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pays button,.seg button{border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:12px;padding:10px 4px;font-weight:700;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.pays button[aria-pressed="true"][data-pay="efectivo"]{border-color:var(--cash);background:color-mix(in srgb,var(--cash) 14%,transparent)}
+.pays button[aria-pressed="true"][data-pay="tarjeta"]{border-color:var(--card);background:color-mix(in srgb,var(--card) 14%,transparent)}
+.pays button[aria-pressed="true"][data-pay="transferencia"]{border-color:var(--transfer);background:color-mix(in srgb,var(--transfer) 14%,transparent)}
+.pricebox{background:var(--accent-soft);border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.pricebox b{font:800 24px var(--display);font-variant-numeric:tabular-nums}
+.note{font-size:12.5px;color:var(--muted);margin:0}
+.err{font-size:13px;color:var(--stop);font-weight:600;margin:0}
+.demo{font-size:12.5px;color:var(--warn);border:1px dashed var(--warn);border-radius:10px;padding:8px 10px;margin:0}
+.big{border:0;border-radius:16px;padding:15px;font:800 22px var(--display);letter-spacing:.04em;text-transform:uppercase;cursor:pointer;color:var(--on-accent);background:var(--accent);width:100%}
+.big:disabled{opacity:.45;cursor:not-allowed}
+.ghost{border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:14px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;width:100%}
+.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:24px}
+.spinner{width:64px;height:64px;border-radius:50%;border:6px solid var(--accent-soft);border-top-color:var(--accent);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.center h3{font:800 28px var(--display);margin:0;text-wrap:balance}
+.driver{display:flex;gap:14px;align-items:center;background:var(--accent-soft);border-radius:16px;padding:14px;width:100%;text-align:left}
+.avatar{width:58px;height:58px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font:800 24px var(--display);flex:none}
+.dn{font-weight:700;font-size:17px}
+.plate{display:inline-block;font:700 18px var(--display);letter-spacing:.12em;border:2px solid var(--ink);border-radius:6px;padding:0 8px;margin-top:4px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.act{border:0;border-radius:14px;padding:14px;font-weight:700;font-size:15px;cursor:pointer;color:#fff}
+.wa{background:#1a9e55}.call{background:#1f5fd6}
+.thumbs{display:flex;gap:12px}
+.thumbs button{font-size:15px;font-weight:700;padding:12px 18px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.pill{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap;border:1px solid currentColor}
+.pill.pend{color:var(--warn)}.pill.conf{color:var(--ok)}.pill.canc{color:var(--stop)}.pill.info{color:var(--trip)}.pill.mute{color:var(--muted)}
+.item{border:1px solid var(--line);border-radius:14px;padding:11px 13px;display:flex;flex-direction:column;gap:4px}
+.item .l1{display:flex;justify-content:space-between;gap:8px;align-items:center;font-weight:700}
+.item .l2{font-size:13px;color:var(--muted)}
+.sec{display:flex;flex-direction:column;gap:8px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kpi{background:var(--panel);border-radius:12px;padding:10px 12px}
+.kpi b{display:block;font:800 28px var(--display);font-variant-numeric:tabular-nums;line-height:1}
+.kpi span{font-size:12px;color:var(--muted)}
+.mini{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:5px 9px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}
+.tin{width:92px!important;padding:6px 8px!important;font-size:14px!important;text-align:right}
+.qr{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.qr .code{background:#fff;border-radius:10px;padding:6px;line-height:0;border:1px solid var(--line)}
+.qr code{font-size:12.5px;word-break:break-all;user-select:all}
+
+/* ---------- TAXISTA (alto contraste, igual en ambos temas) ---------- */
+.d{flex:1;display:flex;flex-direction:column;color:#fff;font-family:var(--display);transition:background .25s;min-height:0}
+.d.off{background:var(--off)} .d.free{background:#0f8a40} .d.ring{background:var(--ring);color:#111;animation:flash 1s steps(2) infinite}
+.d.enroute{background:#0b6f8a} .d.trip{background:var(--trip)} .d.done{background:#0f8a40} .d.agenda{background:#14212b}
+@keyframes flash{50%{background:#ffe45c}}
+.d-state{padding:18px 20px 0;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700;font-size:20px;letter-spacing:.06em;text-transform:uppercase}
+.d-small{border:2px solid currentColor;background:transparent;color:inherit;border-radius:10px;padding:6px 10px;font:700 14px var(--body);cursor:pointer}
+.d-mid{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:20px;gap:10px}
+.d-mid .huge{font-size:56px;font-weight:800;line-height:.95;text-transform:uppercase}
+.d-mid .sub{font:500 17px var(--body);opacity:.9}
+.nextres{background:rgba(0,0,0,.22);border-radius:14px;padding:10px 16px;font:500 14px var(--body)}
+.nextres b{display:block;font:700 24px var(--display);letter-spacing:.02em}
+.d-btn{border:0;color:#fff;font:800 40px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;width:100%}
+.connect{background:#0f8a40;margin:0 16px 16px;width:auto;border-radius:22px;padding:34px 0}
+.agbtn{background:rgba(0,0,0,.28);margin:0 16px 16px;width:auto;border-radius:18px;padding:18px 0;font-size:28px}
+.reject{background:var(--stop);padding:20px 0;font-size:32px}
+.accept{background:var(--ok);padding:34px 0;font-size:48px;display:flex;align-items:center;justify-content:center;gap:14px}
+.count{font-size:30px;background:rgba(0,0,0,.18);border-radius:10px;padding:0 10px;font-variant-numeric:tabular-nums}
+.tcard{margin:14px;background:#111;color:#fff;border-radius:20px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.tcard .k{font:700 13px var(--body);letter-spacing:.1em;text-transform:uppercase;color:#aab4bb}
+.tcard .from{font-size:30px;font-weight:700;line-height:1}
+.tcard .to{font-size:50px;font-weight:800;line-height:.95;text-transform:uppercase;color:var(--ring)}
+.tcard .meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.pax{font-size:34px;font-weight:800;display:flex;align-items:center;gap:6px}
+.pax svg{width:30px;height:30px}
+.paybadge{font-size:26px;font-weight:800;letter-spacing:.06em;padding:4px 12px;border-radius:10px;color:#fff}
+.paybadge.sm{font-size:16px;padding:2px 8px}
+.paybadge.efectivo{background:var(--cash)}.paybadge.tarjeta{background:var(--card)}.paybadge.transferencia{background:var(--transfer)}
+.eta{font-size:26px;font-weight:700;color:#d6dde2}
+.d.trip .tcard .to,.d.enroute .tcard .to{color:#fff}
+.trip-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px}
+.trip-actions button{border:0;border-radius:16px;padding:18px 0;font:800 24px var(--display);text-transform:uppercase;cursor:pointer;color:#fff;background:rgba(255,255,255,.18)}
+.donebtn{background:#fff;color:#14212b;margin:12px 14px 14px;width:auto;border-radius:20px;padding:26px 0}
+.ag-body{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.ag-h{font:700 13px var(--body);letter-spacing:.1em;text-transform:uppercase;color:#aab4bb;margin-top:6px}
+.ag-item{background:#1f2d38;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.ag-item .when{font-size:30px;font-weight:800;line-height:1;color:var(--ring)}
+.ag-item .what{font-size:22px;font-weight:700;line-height:1.05}
+.ag-item .more{font:500 14px var(--body);color:#c9d3da;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.take{border:0;border-radius:14px;background:var(--ok);color:#fff;font:800 28px var(--display);letter-spacing:.06em;text-transform:uppercase;padding:14px 0;cursor:pointer}
+.ag-empty{font:500 14px var(--body);color:#aab4bb}
+.toast{position:absolute;left:14px;right:14px;bottom:14px;background:#111;color:#fff;font:600 14px var(--body);padding:12px 14px;border-radius:12px;z-index:5}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* ---------- Tema 711 Taxi Rapa Nui ---------- */
+:root{--bg:#ffffff;--panel:#f3f7fd;--ink:#081B3A;--muted:#51607a;--line:#d4dfef;--accent:#063B83;--on-accent:#ffffff;--accent-soft:#EAF2FC;--taxi:#FFD000;--night:#081B3A;--blue:#063B83;--body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#07142b;--panel:#0e2145;--ink:#eaf2fc;--muted:#9fb2d1;--line:#1e3560;--accent:#7fb0f5;--on-accent:#081B3A;--accent-soft:#12305f}}
+:root[data-theme="dark"]{--bg:#07142b;--panel:#0e2145;--ink:#eaf2fc;--muted:#9fb2d1;--line:#1e3560;--accent:#7fb0f5;--on-accent:#081B3A;--accent-soft:#12305f}
+.ico{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.home{flex:1;display:flex;flex-direction:column;background:var(--blue);color:#fff;min-height:0;overflow:auto}
+.hero{position:relative;container-type:inline-size;flex:none}
+.hero img{display:block;width:100%;height:auto;aspect-ratio:1024/880;object-fit:cover;object-position:center}
+.hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:12%;background:linear-gradient(to bottom,rgba(6,59,131,0),var(--blue))}
+.hero .langs{position:absolute;left:50%;top:52.2%;transform:translate(-50%,-50%);width:67cqw;height:max(36px,7.4cqw);display:flex;gap:2px;background:var(--night);border:1.5px solid #fff;border-radius:99px;padding:3px;z-index:2}
+.hero .langs button{flex:1;border:0;background:none;color:#fff;font:700 13px var(--body);padding:0 4px;border-radius:99px;cursor:pointer}
+.hero .langs button[aria-pressed="true"]{background:var(--taxi);color:var(--night);border-color:var(--taxi)}
+.illus{position:absolute;right:10px;bottom:6px;z-index:2;font:500 10px var(--body);color:#fff;opacity:.85}
+.home-body{display:flex;flex-direction:column;gap:12px;padding:6px 20px 18px}
+.hbtn{display:flex;align-items:center;gap:12px;width:100%;border:0;border-radius:99px;padding:15px 20px;font:800 19px var(--body);cursor:pointer;box-shadow:0 2px 6px rgba(8,27,58,.35);color:var(--night)}
+.hbtn span{flex:1;text-align:left}
+.hbtn .ico{width:26px;height:26px}
+.hbtn.y{background:var(--taxi)}.hbtn.w{background:#fff}
+.hbtn:focus-visible,.svcs button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.svcs{display:grid;grid-template-columns:repeat(3,1fr);margin-top:6px}
+.svcs button{background:none;border:0;color:#fff;font:600 12.5px var(--body);display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 4px;cursor:pointer;text-align:center;line-height:1.2;min-width:0}
+.svcs button+button{border-left:1.5px solid var(--taxi)}
+.svcs .ico{width:28px;height:28px}
+.pnavwrap{flex:none;background:var(--blue);padding:8px 12px 12px}
+.pnav{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-radius:99px;padding:4px;box-shadow:0 2px 8px rgba(8,27,58,.3)}
+.pnav button{border:0;background:none;color:var(--night);font:700 11px var(--body);display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 2px;border-radius:99px;cursor:pointer;min-width:0}
+.pnav button[aria-current="page"]{background:var(--taxi)}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="tag">Prototipo V3.0 · datos de ejemplo</span>
+    <h1>711 Taxi <span>Rapa Nui</span></h1>
+    <p>Recorre las cuatro vistas: pasajero, taxista, hotel y administrador. Todo es simulado dentro de esta página: no se envía nada real y los nombres son de ejemplo.</p>
+  </header>
+
+  <div class="help">
+    <label for="snd"><input type="checkbox" id="snd" checked> Sonido y voz en la alerta</label>
+    <label for="off"><input type="checkbox" id="off"> Simular taxista sin conexión</label>
+    <span>Prueba: pide un taxi como pasajero, o reserva un traslado y tómalo desde la Agenda del taxista.</span>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button id="tab-p" role="tab" data-tab="p">Pasajero</button>
+    <button id="tab-d" role="tab" data-tab="d">Taxista</button>
+    <button id="tab-h" role="tab" data-tab="h">Hotel</button>
+    <button id="tab-a" role="tab" data-tab="a">Admin</button>
+  </div>
+
+  <div class="phones">
+    <section class="col" id="col-m">
+      <h2 id="main-title">Pasajero</h2>
+      <div class="phone" id="main"></div>
+    </section>
+    <section class="col" id="col-d">
+      <h2>Taxista (teléfono en el soporte del auto)</h2>
+      <div class="phone" id="dphone"></div>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+(function(){
+const PERSON='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7" r="4.2"/><path d="M3.5 21c0-4.7 3.8-7.6 8.5-7.6s8.5 2.9 8.5 7.6z"/></svg>';
+const PAY={efectivo:'Efectivo',tarjeta:'Tarjeta',transferencia:'Transferencia'};
+const TOWN=['Centro de Hanga Roa','Caleta Hanga Roa','Ahu Tahai','Hotel en Hanga Roa'];
+const PLACES=['Hotel en Hanga Roa','Aeropuerto Mataveri','Centro de Hanga Roa','Caleta Hanga Roa','Hotel Altiplánico','Hotel Explora'];
+const DESTS=['Centro de Hanga Roa','Aeropuerto Mataveri','Ahu Tahai','Hotel Altiplánico','Hotel Explora','Anakena'];
+const SITE={'Rano Kau':'ranokau','Orongo':'orongo','Vinapu':'vinapu','Puna Pau':'punapau','Vaihu':'vaihu','Akahanga':'akahanga','Ahu Tongariki':'tongariki','Rano Raraku':'ranoraraku'};
+const HOTEL='Hostal Ejemplo';
+
+const T={
+es:{avail:'taxis disponibles ahora',now:'Solicitar Taxi Ahora',now_s:'Para salir en este momento',reserve:'Reservar un Viaje',reserve_s:'Aeropuerto o Anakena, con fecha y hora',mine:'Mis Reservas',ref_title:'Tarifas de referencia',ref_note:'Valores orientativos informados por taxistas locales. No son tarifas oficiales: el precio final se confirma con el taxista antes del viaje.',from:'Recoger en',to:'Voy a',pax:'Pasajeros',pay:'Forma de pago',cash:'Efectivo',cardp:'Tarjeta',transfer:'Transferencia',name:'Nombre',wa:'WhatsApp',ask:'Pedir taxi',noacct:'Sin crear cuenta. Tu número solo lo ve el taxista que acepte.',back:'Volver',price:'Referencia',agree:'A convenir con el taxista',searching:'Buscando tu taxi…',w1:'Avisando a los taxis más cercanos',w2:'Avisando a todos los taxis disponibles',onway:'Tu taxi va en camino',intrip:'Buen viaje',eta:'Llega en unos {n} minutos',check:'Verifica la patente antes de subir.',share:'Compartir mi viaje',call:'Llamar',rate:'¿Cómo estuvo el viaje?',arrived:'Llegaste a',good:'Bien',bad:'Mal',home:'Volver al inicio',none_t:'No hay taxis disponibles',none_p:'Intenta de nuevo en unos minutos o reserva con anticipación.',airport:'Aeropuerto',anakena:'Anakena',date:'Fecha',arr:'Hora de llegada',flight:'Vuelo (opcional)',lodging:'Alojamiento',zone:'Ubicación del alojamiento',ztown:'En el pueblo',zfar:'Más alejado',bags:'Maletas',lei:'Recibimiento con collares',start:'Punto de partida',out:'Hora de salida',ret:'Hora de regreso',xbag:'Llevo equipaje adicional',wait:'Te dejamos entre 10:00 y 13:00 y te vamos a buscar entre 17:00 y 20:00, a la hora que elijas.',send:'Enviar solicitud',sent_t:'Solicitud enviada',sent_p:'Aún no está confirmada. Quedará confirmada cuando un taxista verificado la tome.',conf_t:'Reserva confirmada',canc_t:'Reserva cancelada',err_time:'La ida es entre 10:00 y 13:00 y el regreso entre 17:00 y 20:00.',err_req:'Completa nombre, fecha y hora.',busy:'Ya hay un viaje en curso en esta demostración.',st_pend:'Pendiente de conductor',st_conf:'Confirmada',st_canc:'Cancelada',empty:'Aún no tienes reservas.',link:'En la app real llegarás a tu historial con un enlace seguro, sin contraseña.',rt:'ida y vuelta',night:'tarifa nocturna',lei_s:'con collares',lei_inc:'Incluye recibimiento con collares de flores.',sunrise:'Amanecer',pick:'Hora de recogida',sun_note:'Amanecer en Tongariki, ida y vuelta: se ve desde afuera, sin guía. Esperamos cerca de 1 hora y media y volvemos contigo.',park:'Los sitios del Parque Nacional exigen entrada y guía acreditado. El taxi no reemplaza al guía.',st_reconf:'Pendiente de reconfirmación',st_way:'En camino',st_meet:'Conductor en el punto de encuentro',st_trip:'En viaje',st_done:'Finalizada',st_noshow:'Pasajero ausente',chg:'Cambiar hora',delay:'Avisar atraso de vuelo',cancel:'Cancelar',cancel_q:'¿Seguro que quieres cancelar?',yes_cancel:'Sí, cancelar',keep:'No, mantener',save:'Guardar cambio',newarr:'Nueva hora de llegada',reconf_p:'Cambiaste el horario. El taxista debe reconfirmar.',research_p:'Tu taxista no pudo continuar. Estamos buscando otro.',dup:'Ya enviaste una solicitud igual.',cancelled_t:'Viaje cancelado',noshow_p:'El taxista te esperó y no te encontró. Escríbenos si fue un error.',view:'Ver',nav_home:'Inicio',dest:'Destinos',profile:'Mi Perfil',svc1:'Traslados al Aeropuerto',svc2:'Recorridos Turísticos',svc3:'Servicio Rápido y Confiable',illus:'Imagen ilustrativa',prof_note:'Tus datos se guardan solo en este teléfono. No necesitas crear una cuenta.',savep:'Guardar',saved:'Guardado en este teléfono.',lang:'Idioma',dest_p:'Servicios y valores de referencia. Reserva el que necesites.',push_ask:'Avisarme en este teléfono',push_on:'Avisos activados en este teléfono',push_note:'Sin correo ni cuenta: el aviso llega a este teléfono cuando el taxi va en camino.'},
+en:{avail:'taxis available now',now:'Request a Taxi Now',now_s:'To leave right away',reserve:'Book a Ride',reserve_s:'Airport or Anakena, with date and time',mine:'My bookings',ref_title:'Reference fares',ref_note:'Indicative prices reported by local drivers. They are not official fares: the final price is confirmed with the driver before the trip.',from:'Pick up at',to:'Going to',pax:'Passengers',pay:'Payment',cash:'Cash',cardp:'Card',transfer:'Bank transfer',name:'Name',wa:'WhatsApp',ask:'Request taxi',noacct:'No account needed. Only the driver who accepts sees your number.',back:'Back',price:'Reference',agree:'To be agreed with the driver',searching:'Finding your taxi…',w1:'Alerting the nearest taxis',w2:'Alerting all available taxis',onway:'Your taxi is on the way',intrip:'Enjoy your ride',eta:'Arriving in about {n} minutes',check:'Check the licence plate before getting in.',share:'Share my trip',call:'Call',rate:'How was the ride?',arrived:'You arrived at',good:'Good',bad:'Bad',home:'Back to start',none_t:'No taxis available',none_p:'Try again in a few minutes or book ahead.',airport:'Airport',anakena:'Anakena',date:'Date',arr:'Arrival time',flight:'Flight (optional)',lodging:'Accommodation',zone:'Accommodation location',ztown:'In town',zfar:'Further out',bags:'Suitcases',lei:'Welcome with flower necklaces',start:'Starting point',out:'Departure time',ret:'Return time',xbag:'I have extra luggage',wait:'We drop you off between 10:00 and 13:00 and pick you up between 17:00 and 20:00, at the time you choose.',send:'Send request',sent_t:'Request sent',sent_p:'Not confirmed yet. It is confirmed once a verified driver takes it.',conf_t:'Booking confirmed',canc_t:'Booking cancelled',err_time:'Drop-off is between 10:00 and 13:00, pick-up between 17:00 and 20:00.',err_req:'Fill in name, date and time.',busy:'A trip is already in progress in this demo.',st_pend:'Waiting for a driver',st_conf:'Confirmed',st_canc:'Cancelled',empty:'You have no bookings yet.',link:'In the real app you will reach your history through a secure link, no password.',rt:'round trip',night:'night rate',lei_s:'with flower necklaces',lei_inc:'Includes a welcome with flower necklaces.',sunrise:'Sunrise',pick:'Pick-up time',sun_note:'Tongariki sunrise, round trip: seen from outside, no guide needed. We wait about an hour and a half and bring you back.',park:'National Park sites require a ticket and an accredited guide. A taxi does not replace the guide.',st_reconf:'Awaiting reconfirmation',st_way:'On the way',st_meet:'Driver at the meeting point',st_trip:'On the trip',st_done:'Completed',st_noshow:'Passenger no-show',chg:'Change time',delay:'Report flight delay',cancel:'Cancel',cancel_q:'Are you sure you want to cancel?',yes_cancel:'Yes, cancel',keep:'No, keep it',save:'Save change',newarr:'New arrival time',reconf_p:'You changed the time. The driver must reconfirm.',research_p:'Your driver could not continue. We are finding another one.',dup:'You already sent the same request.',cancelled_t:'Trip cancelled',noshow_p:'The driver waited and could not find you. Message us if this is a mistake.',view:'Open',nav_home:'Home',dest:'Destinations',profile:'My Profile',svc1:'Airport Transfers',svc2:'Sightseeing Rides',svc3:'Fast, Reliable Service',illus:'Illustrative image',prof_note:'Your details are saved only on this phone. No account needed.',savep:'Save',saved:'Saved on this phone.',lang:'Language',dest_p:'Services and reference prices. Book the one you need.',push_ask:'Notify me on this phone',push_on:'Notifications on for this phone',push_note:'No email or account: this phone gets an alert when your taxi is on the way.'},
+fr:{avail:'taxis disponibles maintenant',now:'Demander un taxi',now_s:'Pour partir tout de suite',reserve:'Réserver un trajet',reserve_s:'Aéroport ou Anakena, avec date et heure',mine:'Mes réservations',ref_title:'Tarifs de référence',ref_note:"Prix indicatifs communiqués par des chauffeurs locaux. Ce ne sont pas des tarifs officiels : le prix final est confirmé avec le chauffeur avant le trajet.",from:'Prise en charge',to:'Destination',pax:'Passagers',pay:'Paiement',cash:'Espèces',cardp:'Carte',transfer:'Virement',name:'Nom',wa:'WhatsApp',ask:'Commander',noacct:"Sans créer de compte. Seul le chauffeur qui accepte voit votre numéro.",back:'Retour',price:'Référence',agree:'À convenir avec le chauffeur',searching:'Recherche de votre taxi…',w1:'Alerte aux taxis les plus proches',w2:'Alerte à tous les taxis disponibles',onway:'Votre taxi arrive',intrip:'Bon trajet',eta:'Arrivée dans environ {n} minutes',check:"Vérifiez la plaque avant de monter.",share:'Partager mon trajet',call:'Appeler',rate:"Comment s'est passé le trajet ?",arrived:'Vous êtes arrivé à',good:'Bien',bad:'Mal',home:"Retour à l'accueil",none_t:'Aucun taxi disponible',none_p:"Réessayez dans quelques minutes ou réservez à l'avance.",airport:'Aéroport',anakena:'Anakena',date:'Date',arr:"Heure d'arrivée",flight:'Vol (facultatif)',lodging:'Hébergement',zone:"Emplacement de l'hébergement",ztown:'Dans le village',zfar:'Plus éloigné',bags:'Valises',lei:'Accueil avec colliers de fleurs',start:'Point de départ',out:'Heure de départ',ret:'Heure de retour',xbag:"J'ai des bagages supplémentaires",wait:"Nous vous déposons entre 10h00 et 13h00 et revenons vous chercher entre 17h00 et 20h00, à l'heure choisie.",send:'Envoyer la demande',sent_t:'Demande envoyée',sent_p:"Pas encore confirmée. Elle le sera lorsqu'un chauffeur vérifié la prendra.",conf_t:'Réservation confirmée',canc_t:'Réservation annulée',err_time:"Aller entre 10h00 et 13h00, retour entre 17h00 et 20h00.",err_req:'Indiquez le nom, la date et l’heure.',busy:'Un trajet est déjà en cours dans cette démo.',st_pend:"En attente d'un chauffeur",st_conf:'Confirmée',st_canc:'Annulée',empty:"Vous n'avez pas encore de réservation.",link:"Dans l'application réelle, un lien sécurisé donnera accès à votre historique, sans mot de passe.",rt:'aller-retour',night:'tarif de nuit',lei_s:'avec colliers',lei_inc:'Accueil avec colliers de fleurs inclus.',sunrise:'Aube',pick:'Heure de prise en charge',sun_note:"Lever du soleil à Tongariki, aller-retour : vu de l'extérieur, sans guide. Nous attendons environ une heure et demie et vous ramenons.",park:"Les sites du Parc National exigent un billet et un guide accrédité. Le taxi ne remplace pas le guide.",st_reconf:'En attente de reconfirmation',st_way:'En route',st_meet:'Chauffeur au point de rendez-vous',st_trip:'En trajet',st_done:'Terminée',st_noshow:'Passager absent',chg:"Changer l'heure",delay:'Signaler un retard de vol',cancel:'Annuler',cancel_q:'Voulez-vous vraiment annuler ?',yes_cancel:'Oui, annuler',keep:'Non, garder',save:'Enregistrer',newarr:"Nouvelle heure d'arrivée",reconf_p:"Vous avez changé l'horaire. Le chauffeur doit reconfirmer.",research_p:"Votre chauffeur n'a pas pu continuer. Nous en cherchons un autre.",dup:'Vous avez déjà envoyé la même demande.',cancelled_t:'Trajet annulé',noshow_p:"Le chauffeur vous a attendu sans vous trouver. Écrivez-nous en cas d'erreur.",view:'Ouvrir',nav_home:'Accueil',dest:'Destinations',profile:'Mon profil',svc1:"Transferts aéroport",svc2:'Trajets touristiques',svc3:'Service rapide et fiable',illus:'Image illustrative',prof_note:"Vos données restent uniquement sur ce téléphone. Aucun compte nécessaire.",savep:'Enregistrer',saved:'Enregistré sur ce téléphone.',lang:'Langue',dest_p:'Services et prix de référence. Réservez celui dont vous avez besoin.',push_ask:'Me prévenir sur ce téléphone',push_on:'Notifications activées sur ce téléphone',push_note:"Sans e-mail ni compte : ce téléphone reçoit une alerte quand le taxi est en route."}
+};
+const tp=k=>T[S.lang][k], tes=k=>T.es[k];
+
+function isoDay(off){return new Date(Date.now()+off*864e5).toLocaleDateString('en-CA',{timeZone:'Pacific/Easter'})}
+function mins(s){const a=String(s).split(':');return (+a[0])*60+(+a[1])}
+function dayLabel(d){if(d===isoDay(0))return 'Hoy';if(d===isoDay(1))return 'Mañana';const p=d.split('-');return p[2]+'/'+p[1]}
+const fmt=n=>'$'+Number(n).toLocaleString('es-CL');
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+const S={lang:'es',tab:'p',main:'p',pview:'home',hview:'home',dview:'main',plan:50000,
+ tariffs:[
+  {id:'corto',name:'Trayecto corto en el centro',price:4000,cond:'Tarifa mínima',upd:'Dato inicial'},
+  {id:'pueblo',name:'Viaje dentro del pueblo',price:5000,cond:'Trayecto normal en Hanga Roa',upd:'Dato inicial'},
+  {id:'aero',name:'Viaje hacia el aeropuerto desde el pueblo',price:10000,cond:'Salida',upd:'Dato inicial'},
+  {id:'aerolejos',name:'Viaje hacia el aeropuerto desde alojamiento alejado',price:15000,cond:'Salida',upd:'Dato inicial'},
+  
+  {id:'collares',name:'Llegada al aeropuerto con collares',price:20000,cond:'Precio único: traslado y collares incluidos',upd:'Dato inicial'},
+  {id:'anakena',name:'Anakena ida y vuelta coordinada',price:35000,cond:'Ida entre 10:00 y 13:00, regreso entre 17:00 y 20:00',upd:'Dato inicial'},
+  {id:'akivi',name:'Ahu Akivi',price:10000,cond:'Por trayecto',upd:'Dato inicial'},
+  {id:'altiplanico',name:'Hotel Altiplánico',price:10000,cond:'Por trayecto',upd:'Dato inicial'},
+  {id:'explora',name:'Hotel Explora',price:15000,cond:'Por trayecto',upd:'Dato inicial'},
+  {id:'ranokau',name:'Rano Kau',price:15000,cond:'',upd:'Dato inicial'},
+  {id:'orongo',name:'Orongo',price:15000,cond:'',upd:'Dato inicial'},
+  {id:'vinapu',name:'Vinapu',price:20000,cond:'',upd:'Dato inicial'},
+  {id:'punapau',name:'Puna Pau',price:20000,cond:'',upd:'Dato inicial'},
+  {id:'vaihu',name:'Vaihu',price:20000,cond:'',upd:'Dato inicial'},
+  {id:'akahanga',name:'Akahanga',price:35000,cond:'',upd:'Dato inicial'},
+  {id:'tongariki',name:'Ahu Tongariki',price:35000,cond:'',upd:'Dato inicial'},
+  {id:'ranoraraku',name:'Rano Raraku',price:35000,cond:'',upd:'Dato inicial'},
+  {id:'amanecer',name:'Amanecer en Tongariki, ida y vuelta',price:45000,cond:'Se ve desde afuera, sin guía. Incluye cerca de 1 hora y media de espera y el regreso',upd:'Dato inicial'},
+  {id:'noche',name:'Mínimo nocturno (20:00 a 24:00)',price:5000,cond:'Ningún viaje cuesta menos en ese horario',upd:'Dato inicial'},
+  {id:'madrugada',name:'Mínimo después de medianoche',price:10000,cond:'Toda la noche, hasta las 06:00',upd:'Dato inicial'},
+  {id:'multa',name:'Multa al taxista por no presentarse a una reserva',price:5000,cond:'No se muestra al pasajero',upd:'Dato inicial',off:true}],
+ drivers:[
+  {id:'me',name:'Juan Pérez',ini:'JP',car:'Toyota Corolla blanco',plate:'ABCD-12',seats:4,status:'free',sub:'Al día',approved:true,offers:0,done:0,eta:4},
+  {id:'d2',name:'Ana Soto',ini:'AS',car:'Hyundai H1 gris (van)',plate:'WXYZ-34',seats:8,status:'free',sub:'Al día',approved:true,offers:0,done:0,eta:6},
+  {id:'d3',name:'Pedro Díaz',ini:'PD',car:'Nissan Versa rojo',plate:'EFGH-56',seats:4,status:'free',sub:'En prueba',approved:true,offers:0,done:0,eta:7},
+  {id:'d4',name:'Luis Rojas',ini:'LR',car:'Kia Rio azul',plate:'JKLM-78',seats:4,status:'off',sub:'Vencida',approved:true,offers:0,done:0,eta:8},
+  {id:'d5',name:'Marta Vega',ini:'MV',car:'Suzuki Ertiga plata',plate:'NPQR-90',seats:6,status:'off',sub:'Sin iniciar',approved:false,offers:0,done:0,eta:9}],
+ trips:[],log:[],offline:false,lead:15,grace:10,push:false,hotelPro:false,hres:null,trip:null,ptrip:null,pres:null,timer:null,secs:20,
+ res:[{id:1,type:'anakena',name:'Familia Ejemplo',wa:'+56 9 0000 0001',date:isoDay(1),blocks:[[720,775],[1080,1140]],t1:'12:00',t2:'18:30',start:'Hotel en Hanga Roa',pax:4,pay:'efectivo',price:35000,status:'Confirmada',drv:'me',source:'Directo'}],
+ f:{from:'Hotel en Hanga Roa',to:'Centro de Hanga Roa',pax:2,pay:'efectivo',name:'Laura',wa:'+56 9 0000 0000'},
+ r:{type:'airport'}
+};
+const me=S.drivers[0];
+try{const l=localStorage.getItem('lang711');if(T[l])S.lang=l;const p=JSON.parse(localStorage.getItem('perfil711')||'null');if(p){S.f.name=p.name||S.f.name;S.f.wa=p.wa||S.f.wa;S.r.name=p.name;S.r.wa=p.wa}}catch(e){}
+S.tariffs.forEach(x=>{if(x.id==='akivi'||Object.values(SITE).includes(x.id)){x.off=true;x.cond='No se ofrece: el sitio exige guía acreditado'}});
+const main=document.getElementById('main'), dphone=document.getElementById('dphone');
+const narrow=()=>window.matchMedia('(max-width:820px)').matches;
+const tar=id=>S.tariffs.find(x=>x.id===id).price;
+const canWork=d=>d.approved&&d.sub!=='Vencida'&&d.sub!=='Suspendida'&&d.sub!=='Sin iniciar';
+const available=()=>S.drivers.filter(d=>canWork(d)&&d.status==='free'&&!(d.id==='me'&&S.offline)).length;
+const activeTrip=()=>S.trip&&['Buscando','Asignado','En viaje'].includes(S.trip.status);
+let audioCtx=null, beepInt=null, wakeLock=null;
+
+function toast(el,msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;el.appendChild(t);setTimeout(()=>t.remove(),3000)}
+
+/* ---------- pestañas ---------- */
+const TITLES={p:'Pasajero',h:'Hotel o alojamiento (acceso gratuito)',a:'Administrador'};
+function applyTabs(){
+  const sel=(!narrow()&&S.tab==='d')?S.main:S.tab;
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===sel));
+  document.getElementById('col-m').dataset.hidden=S.tab==='d'?'true':'false';
+  document.getElementById('col-d').dataset.hidden=S.tab==='d'?'false':'true';
+  document.getElementById('main-title').textContent=TITLES[S.main];
+}
+function setTab(k){S.tab=k;if(k!=='d')S.main=k;applyTabs();renderMain(true)}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+
+/* ---------- sonido ---------- */
+function startAlert(){
+  if(!document.getElementById('snd').checked) return;
+  try{
+    audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+    const beep=()=>{[0,0.18].forEach(d=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='square';o.frequency.value=880;g.gain.value=.08;o.connect(g);g.connect(audioCtx.destination);o.start(audioCtx.currentTime+d);o.stop(audioCtx.currentTime+d+.12)})};
+    beep();beepInt=setInterval(beep,1100);
+  }catch(e){}
+  try{const f=S.trip;const u=new SpeechSynthesisUtterance(`Viaje a ${f.to}. ${f.pax} ${f.pax==1?'pasajero':'pasajeros'}. Pago con ${PAY[f.pay]}.`);u.lang='es-CL';speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}
+  try{navigator.vibrate&&navigator.vibrate([400,200,400])}catch(e){}
+}
+function stopAlert(){clearInterval(beepInt);beepInt=null;try{speechSynthesis.cancel()}catch(e){}}
+async function keepAwake(){try{if('wakeLock' in navigator&&!wakeLock){wakeLock=await navigator.wakeLock.request('screen');wakeLock.addEventListener('release',()=>wakeLock=null)}}catch(e){}}
+
+/* ---------- tarifas ---------- */
+function basePrice(from,to){
+  if(from==='Aeropuerto Mataveri') return {p:tar('collares'),lei:true};
+  if(to==='Anakena'||from==='Anakena') return {p:tar('anakena'),rt:true};
+  if(to==='Aeropuerto Mataveri') return {p:tar(TOWN.includes(from)?'aero':'aerolejos')};
+  const sk=SITE[to]||SITE[from]; if(sk) return {p:tar(sk)};
+  if(to==='Hotel Explora'||from==='Hotel Explora') return {p:tar('explora')};
+  if(to==='Hotel Altiplánico'||from==='Hotel Altiplánico') return {p:tar('altiplanico')};
+  if(to==='Ahu Akivi'||from==='Ahu Akivi') return {p:tar('akivi')};
+  if(to==='Aeropuerto Mataveri') return {p:tar('aero')};
+  const CORE=['Centro de Hanga Roa','Caleta Hanga Roa'];
+  if(CORE.includes(from)&&CORE.includes(to)) return {p:tar('corto')};
+  if(TOWN.includes(from)&&TOWN.includes(to)) return {p:tar('pueblo')};
+  return null;
+}
+function rnHour(){return parseInt(new Date().toLocaleString('en-GB',{timeZone:'Pacific/Easter',hour:'2-digit',hour12:false}),10)%24}
+function refPrice(from,to){const r=basePrice(from,to);if(!r||r.rt)return r;const h=rnHour();
+  const m=h>=20?tar('noche'):h<6?tar('madrugada'):0;if(r.p<m){r.p=m;r.night=true}
+  return r}
+function tariffTable(){return `<div class="scroll"><table>${S.tariffs.filter(x=>!x.off).map(x=>`<tr><td>${esc(x.name)}</td><td class="num">${fmt(x.price)}</td></tr>`).join('')}</table></div>`}
+
+/* ---------- formularios compartidos ---------- */
+function payButtons(L,cur){const lab={efectivo:L('cash'),tarjeta:L('cardp'),transferencia:L('transfer')};
+  return `<div class="pays">${Object.keys(PAY).map(k=>`<button type="button" data-pay="${k}" aria-pressed="${cur===k}">${lab[k]}</button>`).join('')}</div>`}
+function wirePay(root,obj){root.querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>{obj.pay=b.dataset.pay;root.querySelectorAll('[data-pay]').forEach(x=>x.setAttribute('aria-pressed',x===b))})}
+const opt=(arr,v)=>arr.map(p=>`<option${p===v?' selected':''}>${esc(p)}</option>`).join('');
+
+function nowForm(el,L,source,onBack,onSent){
+  const f=S.f;
+  el.innerHTML=`<div class="top"><button class="linkbtn" id="n-back">‹ ${L('back')}</button><div class="brand" style="margin-top:6px">${L('now')}</div></div>
+  <form class="body" id="n-form">
+    <div class="field"><label for="n-from">${L('from')}</label><select id="n-from">${opt(PLACES,f.from)}</select></div>
+    <div class="field"><label for="n-to">${L('to')}</label><select id="n-to">${opt(DESTS,f.to)}</select></div>
+    <div class="pricebox"><span>${L('price')}</span><b id="n-price"></b></div>
+    <div class="field"><span class="flabel">${L('pax')}</span>
+      <div class="stepper"><button type="button" id="n-minus" aria-label="-">−</button><output id="n-pax">${f.pax}</output><button type="button" id="n-plus" aria-label="+">+</button></div></div>
+    <div class="field"><span class="flabel">${L('pay')}</span>${payButtons(L,f.pay)}</div>
+    <div class="row2">
+      <div class="field"><label for="n-name">${L('name')}</label><input type="text" id="n-name" value="${esc(f.name)}" autocomplete="off"></div>
+      <div class="field"><label for="n-wa">${L('wa')}</label><input type="tel" id="n-wa" value="${esc(f.wa)}" autocomplete="off"></div>
+    </div>
+    <button class="big" type="submit" ${available()===0||activeTrip()?'disabled':''}>${L('ask')}</button>
+    <p class="note">${activeTrip()?L('busy'):L('noacct')}</p>
+  </form>`;
+  const q=s=>el.querySelector(s);
+  const upd=()=>{const r=refPrice(q('#n-from').value,q('#n-to').value);q('#n-price').textContent=r?fmt(r.p)+(r.rt?' · '+L('rt'):'')+(r.lei?' · '+L('lei_s'):'')+(r.night?' · '+L('night'):''):L('agree')};
+  q('#n-from').onchange=upd;q('#n-to').onchange=upd;upd();
+  q('#n-minus').onclick=()=>{f.pax=Math.max(1,f.pax-1);q('#n-pax').value=f.pax};
+  q('#n-plus').onclick=()=>{f.pax=Math.min(8,f.pax+1);q('#n-pax').value=f.pax};
+  wirePay(el,f);
+  q('#n-back').onclick=onBack;
+  q('#n-form').onsubmit=e=>{e.preventDefault();f.from=q('#n-from').value;f.to=q('#n-to').value;f.name=q('#n-name').value.trim()||'Pasajero';f.wa=q('#n-wa').value;
+    const t=requestTrip({from:f.from,to:f.to,pax:f.pax,pay:f.pay,name:f.name,wa:f.wa},source);if(t)onSent(t)};
+}
+
+function reserveForm(el,L,source,onBack,onSent){
+  const r=S.r; if(!r.pay)r.pay='efectivo';
+  el.innerHTML=`<div class="top"><button class="linkbtn" id="r-back">‹ ${L('back')}</button><div class="brand" style="margin-top:6px">${L('reserve')}</div></div>
+  <form class="body" id="r-form">
+    <div class="seg" style="grid-template-columns:repeat(3,1fr)"><button type="button" data-type="airport" aria-pressed="${r.type==='airport'}">${L('airport')}</button><button type="button" data-type="anakena" aria-pressed="${r.type==='anakena'}">${L('anakena')}</button><button type="button" data-type="sunrise" aria-pressed="${r.type==='sunrise'}">${L('sunrise')}</button></div>
+    <div class="row2">
+      <div class="field"><label for="r-name">${L('name')}</label><input type="text" id="r-name" value="${esc(r.name||'Laura')}" autocomplete="off"></div>
+      <div class="field"><label for="r-wa">${L('wa')}</label><input type="tel" id="r-wa" value="${esc(r.wa||'+56 9 0000 0000')}" autocomplete="off"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label for="r-date">${L('date')}</label><input type="date" id="r-date" value="${r.date||isoDay(1)}" min="${isoDay(0)}"></div>
+      <div class="field"><label for="r-pax">${L('pax')}</label><input type="number" id="r-pax" min="1" max="8" value="${r.pax||2}"></div>
+    </div>
+    <div id="g-air" ${r.type==='airport'?'':'hidden'} style="display:flex;flex-direction:column;gap:14px">
+      <div class="row2">
+        <div class="field"><label for="r-time">${L('arr')}</label><input type="time" id="r-time" value="14:30"></div>
+        <div class="field"><label for="r-flight">${L('flight')}</label><input type="text" id="r-flight" placeholder="LA841" autocomplete="off"></div>
+      </div>
+      <div class="field"><label for="r-lodging">${L('lodging')}</label><input type="text" id="r-lodging" value="${source===HOTEL?HOTEL:''}" placeholder="Hotel, hostal, cabaña…" autocomplete="off"></div>
+      <div class="row2">
+        
+        <div class="field"><label for="r-bags">${L('bags')}</label><input type="number" id="r-bags" min="0" max="20" value="2"></div>
+      </div>
+      <p class="note">${L('lei_inc')}</p>
+    </div>
+    <div id="g-ana" ${r.type==='anakena'?'':'hidden'} style="display:flex;flex-direction:column;gap:14px">
+      <div class="field"><label for="r-start">${L('start')}</label><select id="r-start">${opt(PLACES.filter(p=>p!=='Aeropuerto Mataveri'),'Hotel en Hanga Roa')}</select></div>
+      <div class="row2">
+        <div class="field"><label for="r-out">${L('out')}</label><input type="time" id="r-out" value="12:00" min="10:00" max="13:00"></div>
+        <div class="field"><label for="r-ret">${L('ret')}</label><input type="time" id="r-ret" value="18:30" min="17:00" max="20:00"></div>
+      </div>
+      <label class="chk" for="r-xbag"><input type="checkbox" id="r-xbag"> ${L('xbag')}</label>
+      <p class="note">${L('wait')}</p>
+    </div>
+    <div id="g-sun" ${r.type==='sunrise'?'':'hidden'} style="display:flex;flex-direction:column;gap:14px"><div class="row2"><div class="field"><label for="r-sstart">${L('start')}</label><select id="r-sstart">${opt(PLACES.filter(p=>p!=='Aeropuerto Mataveri'),'Hotel en Hanga Roa')}</select></div><div class="field"><label for="r-stime">${L('pick')}</label><input type="time" id="r-stime" value="06:00"></div></div><p class="note">${L('sun_note')}</p></div>
+    <div class="field"><span class="flabel">${L('pay')}</span>${payButtons(L,r.pay)}</div>
+    <div class="pricebox"><span>${L('price')}</span><b id="r-price"></b></div>
+    <p class="err" id="r-err" hidden></p>
+    <button class="big" type="submit">${L('send')}</button>
+  </form>`;
+  const q=s=>el.querySelector(s);
+  const price=()=>r.type==='anakena'?tar('anakena'):r.type==='sunrise'?tar('amanecer'):tar('collares');
+  const upd=()=>{q('#r-price').textContent=fmt(price())+(r.type!=='airport'?' · '+L('rt'):'')};
+  el.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{r.type=b.dataset.type;el.querySelectorAll('[data-type]').forEach(x=>x.setAttribute('aria-pressed',x===b));q('#g-air').hidden=r.type!=='airport';q('#g-ana').hidden=r.type!=='anakena';q('#g-sun').hidden=r.type!=='sunrise';upd()});
+  upd();
+  wirePay(el,r);
+  q('#r-back').onclick=onBack;
+  q('#r-form').onsubmit=e=>{e.preventDefault();
+    const err=m=>{q('#r-err').textContent=m;q('#r-err').hidden=false};
+    const name=q('#r-name').value.trim(), date=q('#r-date').value, pax=Math.max(1,Math.min(8,+q('#r-pax').value||1));
+    const o={type:r.type,name,wa:q('#r-wa').value,date,pax,pay:r.pay,price:price(),source};
+    if(r.type==='airport'){const t=q('#r-time').value;if(!name||!date||!t)return err(L('err_req'));
+      Object.assign(o,{t1:t,blocks:[[mins(t),mins(t)+60]],flight:q('#r-flight').value.trim(),lodging:q('#r-lodging').value.trim()||'Alojamiento por confirmar',bags:+q('#r-bags').value||0,lei:true});
+    }else if(r.type==='sunrise'){const t=q('#r-stime').value;if(!name||!date||!t)return err(L('err_req'));
+      Object.assign(o,{t1:t,blocks:[[mins(t),mins(t)+180]],start:q('#r-sstart').value});
+    }else{const t1=q('#r-out').value,t2=q('#r-ret').value;if(!name||!date||!t1||!t2)return err(L('err_req'));if(mins(t1)<600||mins(t1)>780||mins(t2)<1020||mins(t2)>1200)return err(L('err_time'));
+      Object.assign(o,{t1,t2,blocks:[[mins(t1),mins(t1)+55],[mins(t2)-30,mins(t2)+30]],start:q('#r-start').value,xbag:q('#r-xbag').checked});}
+    if(S.res.some(x=>x.status!=='Cancelada'&&x.name===o.name&&x.date===o.date&&x.type===o.type&&x.t1===o.t1))return err(L('dup'));
+    o.big=(o.bags||0)>4||!!o.xbag;o.id=S.res.length+1;o.status='Pendiente de conductor';o.drv=null;S.res.push(o);log('Reserva nueva',`${o.name} · ${resWhen(o)} · ${resWhat(o)}`);msg(o,'Recibimos tu solicitud. Te avisaremos cuando un taxista la confirme.');
+    onSent(o);renderD();
+  };
+}
+function resWhat(r){return r.type==='airport'?`Aeropuerto → ${r.lodging}`:r.type==='sunrise'?`${r.start} ⇄ Tongariki (amanecer)`:`${r.start} ⇄ Anakena`}
+function resWhen(r){return `${dayLabel(r.date)} ${r.t1}${r.t2?'–'+r.t2:''}`}
+const STK={'Pendiente de conductor':['pend','st_pend'],'Confirmada':['conf','st_conf'],'Cancelada':['canc','st_canc'],'Pendiente de reconfirmación':['pend','st_reconf'],'En camino':['info','st_way'],'Conductor en punto de encuentro':['info','st_meet'],'En viaje':['info','st_trip'],'Finalizada':['conf','st_done'],'Pasajero ausente':['canc','st_noshow']};
+const OPEN=['Pendiente de conductor','Confirmada','Pendiente de reconfirmación'];
+function pillFor(st,L){const s=STK[st]||['mute',null];return `<span class="pill ${s[0]}">${s[1]?L(s[1]):esc(st)}</span>`}
+function log(kind,text){S.log.unshift({kind,text,at:new Date().toLocaleTimeString('es-CL',{timeZone:'Pacific/Easter',hour:'2-digit',minute:'2-digit'})})}
+function blocksFor(r){const a=mins(r.t1);return r.type==='airport'?[[a,a+60]]:r.type==='sunrise'?[[a,a+180]]:[[a,a+55],[mins(r.t2)-30,mins(r.t2)+30]]}
+function setRes(t,st){if(t&&t.res)t.res.status=st}
+function resNotes(r,L){let h='';
+  if(r.status==='Pendiente de reconfirmación')h+=`<p class="note">${L('reconf_p')}</p>`;
+  if(r.status==='Pendiente de conductor'&&r.urgent)h+=`<p class="note">${L('research_p')}</p>`;
+  if(r.status==='Pasajero ausente')h+=`<p class="note">${L('noshow_p')}</p>`;
+  return h}
+function resActions(r,L){if(!OPEN.includes(r.status))return '';
+  const two=r.type==='anakena';
+  return `<div id="ra" style="width:100%;display:flex;flex-direction:column;gap:8px">
+    <div class="row2"><button class="ghost" id="ra-chg">${r.type==='airport'?L('delay'):L('chg')}</button><button class="ghost" id="ra-can">${L('cancel')}</button></div>
+    <div id="ra-f" hidden style="display:flex;flex-direction:column;gap:8px;text-align:left">
+      <div class="row2"><div class="field"><label for="ra-t1">${r.type==='airport'?L('newarr'):two?L('out'):L('pick')}</label><input type="time" id="ra-t1" value="${r.t1}"></div>
+      ${two?`<div class="field"><label for="ra-t2">${L('ret')}</label><input type="time" id="ra-t2" value="${r.t2}"></div>`:`<div class="field"><label for="ra-d">${L('date')}</label><input type="date" id="ra-d" value="${r.date}" min="${isoDay(0)}"></div>`}</div>
+      <p class="err" id="ra-err" hidden></p><button class="big" id="ra-save" type="button">${L('save')}</button></div>
+    <div id="ra-c" hidden style="display:flex;flex-direction:column;gap:8px"><p class="note">${L('cancel_q')}</p><div class="row2"><button class="ghost" id="ra-no">${L('keep')}</button><button class="ghost" id="ra-yes" style="border-color:var(--stop);color:var(--stop)">${L('yes_cancel')}</button></div></div>
+  </div>`}
+function wireResActions(r,L,who){const q=s=>main.querySelector(s);if(!q('#ra'))return;
+  q('#ra-chg').onclick=()=>{q('#ra-f').hidden=!q('#ra-f').hidden;q('#ra-c').hidden=true};
+  q('#ra-can').onclick=()=>{q('#ra-c').hidden=!q('#ra-c').hidden;q('#ra-f').hidden=true};
+  q('#ra-no').onclick=()=>{q('#ra-c').hidden=true};
+  q('#ra-yes').onclick=()=>cancelRes(r,who||'el pasajero');
+  q('#ra-save').onclick=()=>{const t1=q('#ra-t1').value,t2=q('#ra-t2')?q('#ra-t2').value:r.t2,d=q('#ra-d')?q('#ra-d').value:r.date;
+    const e=m=>{q('#ra-err').textContent=m;q('#ra-err').hidden=false};
+    if(!t1||!d||(r.type==='anakena'&&!t2))return e(L('err_req'));
+    if(r.type==='anakena'&&(mins(t1)<600||mins(t1)>780||mins(t2)<1020||mins(t2)>1200))return e(L('err_time'));
+    changeRes(r,d,t1,t2,r.type==='airport')}}
+function changeRes(r,d,t1,t2,isDelay){const old=resWhen(r);r.date=d;r.t1=t1;if(r.type==='anakena')r.t2=t2;r.blocks=blocksFor(r);
+  if(isDelay)r.delayed=true;
+  log(isDelay?'Atraso de vuelo':'Cambio de hora',`${r.name}: ${old} → ${resWhen(r)}`);
+  if(r.drv&&r.status==='Confirmada'){r.status='Pendiente de reconfirmación';log('Aviso',`Se avisó a ${S.drivers.find(x=>x.id===r.drv).name} para reconfirmar (simulado)`);if(r.drv!=='me')autoReconf(r)}
+  renderAll(true)}
+function cancelRes(r,who){const had=r.drv;r.status='Cancelada';r.drv=null;log('Cancelación',`${r.name} · ${resWhen(r)} · canceló ${who}`);
+  if(had)log('Aviso','Se avisó al taxista de la cancelación (simulado)');
+  renderAll(true);if(had==='me')toast(dphone,'Una reserva tuya fue cancelada. Revisa tu agenda.')}
+function msg(r,text){log(S.push?'Notificación al teléfono del pasajero':'Aviso solo en pantalla (pasajero sin notificaciones)',`${r.name}: ${text}`)}
+function reassign(r,fine){const prev=S.drivers.find(x=>x.id===r.drv);
+  if(fine&&prev){prev.fines=(prev.fines||0)+1;log('Multa',`${prev.name} no tocó Iniciar ${S.grace} min antes de ${resWhen(r)} de ${r.name}. Multa registrada${tar('multa')?' de '+fmt(tar('multa')):' (monto por definir)'}.`)}
+  r.drv=null;r.urgent=true;
+  const o=S.drivers.filter(d=>d!==prev&&canWork(d)&&d.status==='free'&&!(d.id==='me'&&S.offline)&&d.seats>=r.pax&&(!r.big||d.seats>=6)&&!conflict(r,d.id)).sort((x,y)=>x.offers-y.offers)[0];
+  if(o){r.drv=o.id;r.status='Confirmada';r.urgent=false;o.offers++;log('Reasignación automática',`${resWhen(r)} de ${r.name} pasó a ${o.name}`);msg(r,`Tu reserva sigue en pie. Tu taxista ahora es ${o.name}, patente ${o.plate}.`)}
+  else{r.status='Sin disponibilidad';log('Sin disponibilidad',`No hay taxistas activos para ${resWhen(r)} de ${r.name}. Se vuelve a intentar.`)}
+  renderAll(true);if(o&&o.id==='me')toast(dphone,'Se te asignó una reserva. Revisa tu agenda.')}
+function assignOther(r){const o=S.drivers.filter(d=>d.id!=='me'&&canWork(d)&&d.seats>=r.pax&&(!r.big||d.seats>=6)&&!conflict(r,d.id)).sort((x,y)=>x.offers-y.offers)[0];
+  if(o){r.drv=o.id;r.status='Confirmada';r.urgent=false;o.offers++;log('Asignación manual',`${o.name} quedó con ${resWhen(r)} de ${r.name}`)}
+  else{r.status='Sin disponibilidad';log('Sin disponibilidad',`Ningún conductor puede tomar ${resWhen(r)} de ${r.name}`)}
+  renderAll(true)}
+function autoReconf(r){setTimeout(()=>{if(r.status!=='Pendiente de reconfirmación')return;if(conflict(r,r.drv)){reassign(r,false);return}r.status='Confirmada';renderAll()},3000)}
+function drvCard(d){return `<div class="driver"><div class="avatar">${d.ini}</div><div><div class="dn">${esc(d.name)} <span class="note">(ejemplo)</span></div><div class="note">${esc(d.car)}</div><span class="plate">${d.plate}</span></div></div>`}
+
+/* ---------- PASAJERO ---------- */
+function renderP(){
+  const v=S.pview, L=tp;
+  if(v==='home'){homeView(L);
+  }else if(v==='dest'){destView(L);
+  }else if(v==='profile'){profileView(L);
+  }else if(v==='home_old'){
+    const mine=S.res.filter(r=>r.source==='Directo'&&r.id!==1).length;
+    main.innerHTML=`<div class="top"><div class="brandrow"><div class="brand">Central de Taxis <span>Rapa Nui</span></div>
+      <div class="langs">${['es','en','fr'].map(l=>`<button data-lang="${l}" aria-pressed="${S.lang===l}">${l.toUpperCase()}</button>`).join('')}</div></div>
+      <div class="live" aria-live="polite"><span class="dot"></span><span><b>${available()}</b> ${L('avail')}</span></div></div>
+    <div class="body">
+      <button class="cta now" id="p-now">${L('now')}<small>${L('now_s')}</small></button>
+      <button class="cta res" id="p-res">${L('reserve')}<small>${L('reserve_s')}</small></button>
+      ${mine?`<button class="linkbtn" id="p-mine">${L('mine')} (${mine}) ›</button>`:''}
+      <div class="ref"><h3>${L('ref_title')}</h3>${tariffTable()}<p class="note" style="margin-top:8px">${L('ref_note')}</p><p class="note" style="margin-top:6px">${L('park')}</p></div>
+    </div>`;
+    main.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{S.lang=b.dataset.lang;renderP()});
+    main.querySelector('#p-now').onclick=()=>{S.pview='now';renderP()};
+    main.querySelector('#p-res').onclick=()=>{S.pview='reserve';renderP()};
+    const m=main.querySelector('#p-mine');if(m)m.onclick=()=>{S.pview='mine';renderP()};
+  }else if(v==='now'){
+    nowForm(main,L,'Directo',()=>{S.pview='home';renderP()},t=>{S.ptrip=t;S.pview='trip';renderP()});
+  }else if(v==='reserve'){
+    reserveForm(main,L,'Directo',()=>{S.pview='home';renderP()},r=>{S.pres=r;S.pview='resdone';renderP()});
+  }else if(v==='trip'){
+    const t=S.ptrip, home=`<button class="ghost" id="p-home">${L('home')}</button>`;
+    if(t.status==='Buscando'){
+      main.innerHTML=`<div class="center"><div class="spinner" role="status"></div><h3>${L('searching')}</h3>
+        <p class="note">${t.wave===2?L('w2'):L('w1')}</p><p class="note">${esc(t.from)} → ${esc(t.to)} · ${t.pax} ${PERSON_TXT()} · ${payName(t.pay,L)}</p>${t.again?`<p class="note">${L('research_p')}</p>`:''}<button class="ghost" id="p-cancel">${L('cancel')}</button></div>`;
+    }else if(t.status==='Asignado'||t.status==='En viaje'){
+      main.innerHTML=`<div class="center"><h3>${t.status==='En viaje'?L('intrip'):L('onway')}</h3>
+        ${t.status==='Asignado'?`<p class="note">${L('eta').replace('{n}',t.drv.eta)}</p>`:''}
+        ${drvCard(t.drv)}
+        <div class="actions"><button class="act wa" id="p-wa">WhatsApp</button><button class="act call" id="p-call">${L('call')}</button></div>
+        <button class="ghost" id="p-share">${L('share')}</button>
+        <p class="note">${L('check')}</p>${pushBox(L)}${t.status==='Asignado'?`<button class="ghost" id="p-cancel">${L('cancel')}</button>`:''}</div>`;
+      const m='Demostración: en la app real se abre WhatsApp o el teléfono.';
+      main.querySelector('#p-wa').onclick=()=>toast(main,m);main.querySelector('#p-call').onclick=()=>toast(main,m);
+      main.querySelector('#p-share').onclick=()=>toast(main,'Demostración: enviaría a un familiar el taxista, la patente y el destino.');
+    }else if(t.status==='Finalizado'){
+      main.innerHTML=`<div class="center"><h3>${L('arrived')} ${esc(t.to)}</h3><p class="note">${L('rate')}</p>
+        <div class="thumbs"><button id="p-up">${L('good')}</button><button id="p-dn">${L('bad')}</button></div>${home}</div>`;
+      const th=()=>toast(main,'Demostración: la valoración llegaría al administrador.');
+      main.querySelector('#p-up').onclick=th;main.querySelector('#p-dn').onclick=th;
+    }else{
+      main.innerHTML=`<div class="center"><h3>${t.status==='Cancelado'?L('cancelled_t'):t.status==='Pasajero ausente'?L('st_noshow'):L('none_t')}</h3><p class="note">${t.status==='Cancelado'?'':t.status==='Pasajero ausente'?L('noshow_p'):L('none_p')}</p>${home}</div>`;
+    }
+    const hb=main.querySelector('#p-home');if(hb)hb.onclick=()=>{S.pview='home';renderP()};
+    const pc=main.querySelector('#p-cancel');if(pc)pc.onclick=()=>passengerCancels(t);wirePush();
+  }else if(v==='resdone'){
+    const r=S.pres, d=S.drivers.find(x=>x.id===r.drv);
+    const title=r.status==='Pendiente de conductor'?L('sent_t'):r.status==='Confirmada'?L('conf_t'):r.status==='Cancelada'?L('canc_t'):(STK[r.status]?L(STK[r.status][1]):r.status);
+    main.innerHTML=`<div class="center"><h3>${title}</h3>${pillFor(r.status,L)}
+      <div class="item" style="width:100%;text-align:left"><div class="l1"><span>${esc(resWhen(r))}</span><span>${fmt(r.price)}</span></div><div class="l2">${esc(resWhat(r))} · ${r.pax} ${PERSON_TXT()} · ${payName(r.pay,L)}</div></div>
+      ${d&&!['Cancelada','Pendiente de conductor'].includes(r.status)?drvCard(d):''}
+      ${resNotes(r,L)}
+      ${resActions(r,L)}
+      ${r.status==='Pendiente de conductor'?`<p class="note">${L('sent_p')}</p><p class="demo">Demostración: entra como Taxista, abre Agenda y toca TOMAR para confirmarla.</p>`:''}
+      ${pushBox(L)}<button class="ghost" id="p-home">${L('home')}</button></div>`;
+    main.querySelector('#p-home').onclick=()=>{S.pview='home';renderP()};
+    wireResActions(r,L);wirePush();
+  }else if(v==='mine'){
+    const list=S.res.filter(r=>r.source==='Directo'&&r.id!==1);
+    main.innerHTML=`<div class="top"><button class="linkbtn" id="p-back">‹ ${L('back')}</button><div class="brand" style="margin-top:6px">${L('mine')}</div></div>
+      <div class="body">${list.length?list.map(r=>`<div class="item"><div class="l1"><span>${esc(resWhen(r))}</span>${pillFor(r.status,L)}</div><div class="l2">${esc(resWhat(r))} · ${fmt(r.price)}</div><div><button class="mini" data-open="${r.id}">${L('view')}</button></div></div>`).join(''):`<p class="note">${L('empty')}</p>`}
+      <p class="note">${L('link')}</p></div>`;
+    main.querySelector('#p-back').onclick=()=>{S.pview='home';renderP()};
+    main.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{S.pres=S.res.find(x=>x.id==b.dataset.open);S.pview='resdone';renderP()});
+    addNav(L);
+  }
+}
+const IC={chev:'<path d="M9 6l6 6-6 6"/>',cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',car:'<path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11"/><rect x="3" y="11" width="18" height="6" rx="2"/><path d="M7 17v2M17 17v2M10 3h4v2h-4z"/>',plane:'<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',pin:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'};
+function ico(n){return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${IC[n]}</svg>`}
+function setLang(l){S.lang=l;try{localStorage.setItem('lang711',l)}catch(e){}}
+function addNav(L){const w=document.createElement('div');w.className='pnavwrap';
+  w.innerHTML=`<nav class="pnav" aria-label="Principal">${[['home','home','nav_home'],['mine','cal','mine'],['dest','pin','dest'],['profile','user','profile']].map(([v,i,k])=>`<button data-nav="${v}" ${S.pview===v?'aria-current="page"':''}>${ico(i)}<span>${L(k)}</span></button>`).join('')}</nav>`;
+  main.appendChild(w);w.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{S.pview=b.dataset.nav;renderP()})}
+function homeView(L){
+  main.innerHTML=`<div class="home"><div class="hero"><img src="hero-711.jpg" width="1024" height="880" alt="711 Taxi Rapa Nui. Servicio de taxis en Rapa Nui. Un taxi blanco 711 avanza por la carretera hacia la playa.">
+    <div class="langs" role="group" aria-label="Idioma / Language / Langue">${[['es','Español'],['en','English'],['fr','Français']].map(([l,n])=>`<button data-lang="${l}" lang="${l}" aria-pressed="${S.lang===l}">${n}</button>`).join('')}</div>
+    <span class="illus">${L('illus')}</span></div>
+    <div class="home-body">
+      <button class="hbtn y" id="p-now">${ico('car')}<span>${L('now')}</span>${ico('chev')}</button>
+      <button class="hbtn w" id="p-res">${ico('cal')}<span>${L('reserve')}</span>${ico('chev')}</button>
+      <div class="svcs"><button id="s-air">${ico('plane')}<span>${L('svc1')}</span></button><button id="s-tour">${ico('pin')}<span>${L('svc2')}</span></button><button id="s-fast">${ico('clock')}<span>${L('svc3')}</span></button></div>
+    </div></div>`;
+  const go=v=>()=>{S.pview=v;renderP()};
+  main.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{setLang(b.dataset.lang);renderP()});
+  main.querySelector('#p-now').onclick=go('now');main.querySelector('#s-fast').onclick=go('now');
+  main.querySelector('#p-res').onclick=go('reserve');main.querySelector('#s-tour').onclick=go('dest');
+  main.querySelector('#s-air').onclick=()=>{S.r.type='airport';S.pview='reserve';renderP()};
+  addNav(L)}
+function destView(L){
+  main.innerHTML=`<div class="top"><div class="brand">${L('dest')}</div><p class="note" style="margin-top:4px">${L('dest_p')}</p></div>
+    <div class="body">
+      <div class="row2"><button class="ghost" data-rt="airport">${L('airport')}</button><button class="ghost" data-rt="anakena">${L('anakena')}</button></div>
+      <button class="ghost" data-rt="sunrise">${L('sunrise')} · Tongariki</button>
+      <div class="ref"><h3>${L('ref_title')}</h3>${tariffTable()}<p class="note" style="margin-top:8px">${L('ref_note')}</p><p class="note" style="margin-top:6px">${L('park')}</p></div>
+    </div>`;
+  main.querySelectorAll('[data-rt]').forEach(b=>b.onclick=()=>{S.r.type=b.dataset.rt;S.pview='reserve';renderP()});
+  addNav(L)}
+function profileView(L){
+  main.innerHTML=`<div class="top"><div class="brand">${L('profile')}</div></div>
+    <form class="body" id="pf-form">
+      <div class="field"><label for="pf-name">${L('name')}</label><input type="text" id="pf-name" value="${esc(S.f.name)}" autocomplete="off"></div>
+      <div class="field"><label for="pf-wa">${L('wa')}</label><input type="tel" id="pf-wa" value="${esc(S.f.wa)}" autocomplete="off"></div>
+      <div class="field"><label for="pf-lang">${L('lang')}</label><select id="pf-lang"><option value="es"${S.lang==='es'?' selected':''}>Español</option><option value="en"${S.lang==='en'?' selected':''}>English</option><option value="fr"${S.lang==='fr'?' selected':''}>Français</option></select></div>
+      <button class="big" type="submit">${L('savep')}</button>
+      <p class="note">${L('prof_note')}</p>
+    </form>`;
+  main.querySelector('#pf-form').onsubmit=e=>{e.preventDefault();const n=main.querySelector('#pf-name').value.trim(),w=main.querySelector('#pf-wa').value.trim();
+    if(n){S.f.name=n;S.r.name=n}if(w){S.f.wa=w;S.r.wa=w}setLang(main.querySelector('#pf-lang').value);
+    try{localStorage.setItem('perfil711',JSON.stringify({name:S.f.name,wa:S.f.wa}))}catch(err){}
+    renderP();toast(main,tp('saved'))};
+  addNav(L)}
+function pushBox(L){return S.push?`<span class="pill conf">${L('push_on')}</span>`:`<button class="ghost" id="p-push">${L('push_ask')}</button><p class="note">${L('push_note')}</p>`}
+function wirePush(){const b=main.querySelector('#p-push');if(b)b.onclick=()=>{S.push=true;log('Permiso de avisos','El pasajero activó las notificaciones en su teléfono (simulado)');renderP()}}
+function PERSON_TXT(){return 'pax'}
+function payName(k,L){return {efectivo:L('cash'),tarjeta:L('cardp'),transferencia:L('transfer')}[k]}
+
+/* ---------- HOTEL ---------- */
+function renderH(){
+  if(S.hview==='now') return nowForm(main,tes,HOTEL,()=>{S.hview='home';renderH()},()=>{S.hview='home';renderH()});
+  if(S.hview==='reserve') return reserveForm(main,tes,HOTEL,()=>{S.hview='home';renderH()},()=>{S.hview='home';renderH()});
+  if(S.hview==='manage'){const r=S.hres;
+    main.innerHTML=`<div class="top"><button class="linkbtn" id="h-back">‹ Volver</button><div class="brand" style="margin-top:6px">Gestionar reserva</div></div>
+    <div class="body"><div class="item"><div class="l1"><span>${esc(r.name)} · ${esc(resWhen(r))}</span>${pillFor(r.status,tes)}</div><div class="l2">${esc(resWhat(r))} · ${fmt(r.price)}</div></div>${resNotes(r,tes)}${resActions(r,tes)}</div>`;
+    main.querySelector('#h-back').onclick=()=>{S.hview='home';renderH()};wireResActions(r,tes,'el alojamiento');return}
+  const trips=S.trips.filter(t=>t.source===HOTEL), res=S.res.filter(r=>r.source===HOTEL);
+  const tp2=t=>({Buscando:'pend',Asignado:'info','En viaje':'info',Finalizado:'conf','Sin disponibilidad':'canc',Cancelado:'canc','Pasajero ausente':'canc'}[t.status]);
+  main.innerHTML=`<div class="top"><div class="brand">${HOTEL} <span class="note" style="font:500 13px var(--body)">(demostración)</span></div>
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="pill ${S.hotelPro?'conf':'mute'}">Plan ${S.hotelPro?'Pro':'Gratis'}</span><button class="mini" id="h-plan">Demostración: ver como plan ${S.hotelPro?'Gratis':'Pro'}</button></div>
+    <div class="live"><span class="dot"></span><span><b>${available()}</b> taxis disponibles ahora</span></div></div>
+  <div class="body">
+    <button class="cta now" id="h-now">Taxi para un huésped<small>Sale en este momento</small></button>
+    <button class="cta res" id="h-res">Reservar traslado<small>Aeropuerto o Anakena</small></button>
+    <div class="sec"><h3>Solicitudes de este alojamiento (${trips.length+res.length})</h3>
+      ${trips.map(t=>`<div class="item"><div class="l1"><span>${esc(t.name)} · ${esc(t.to)}</span><span class="pill ${tp2(t)}">${t.status}</span></div><div class="l2">Taxi inmediato${t.drv?' · '+esc(t.drv.name)+' · '+t.drv.plate:''}</div></div>`).join('')}
+      ${res.map(r=>`<div class="item"><div class="l1"><span>${esc(r.name)} · ${esc(resWhen(r))}</span>${pillFor(r.status,tes)}</div><div class="l2">${esc(resWhat(r))} · ${fmt(r.price)}</div>${S.hotelPro&&OPEN.includes(r.status)?`<div><button class="mini" data-hm="${r.id}">Cambiar o cancelar</button></div>`:''}</div>`).join('')}
+      ${trips.length+res.length?'':'<p class="note">Aquí verás el estado de cada solicitud que hagas para tus huéspedes.</p>'}
+      ${S.hotelPro?'':'<p class="note">Plan Gratis: puedes pedir, reservar y ver el estado. El plan Pro (precio por definir) suma estadísticas, cambiar o cancelar reservas y prioridad.</p>'}
+    </div>
+    <div class="sec"><h3>Código QR propio</h3>
+      <div class="qr"><div class="code" id="h-qr"></div><div style="min-width:0;flex:1"><p class="note">Los huéspedes lo escanean y piden su taxi. Cada solicitud queda registrada con origen ${HOTEL}.</p><code>https://dominio-por-definir.cl/?ref=hostal-ejemplo</code></div></div>
+      <p class="demo">Enlace de ejemplo: el dominio real aún no existe.</p></div>
+  </div>`;
+  try{const q=qrcode(0,'M');q.addData('https://dominio-por-definir.cl/?ref=hostal-ejemplo');q.make();main.querySelector('#h-qr').innerHTML=q.createSvgTag(3,6)}catch(e){main.querySelector('#h-qr').hidden=true}
+  main.querySelector('#h-now').onclick=()=>{S.hview='now';renderH()};
+  main.querySelector('#h-plan').onclick=()=>{S.hotelPro=!S.hotelPro;renderH()};
+  main.querySelectorAll('[data-hm]').forEach(b=>b.onclick=()=>{S.hres=S.res.find(x=>x.id==b.dataset.hm);S.hview='manage';renderH()});
+  main.querySelector('#h-res').onclick=()=>{S.hview='reserve';renderH()};
+}
+
+/* ---------- ADMIN ---------- */
+function renderA(){
+  const done=S.trips.filter(t=>t.status==='Finalizado').length;
+  const pend=S.res.filter(r=>r.status==='Pendiente de conductor').length, conf=S.res.filter(r=>r.status==='Confirmada').length;
+  const src={};[...S.trips,...S.res].forEach(x=>{src[x.source]=(src[x.source]||0)+1});
+  const active=S.drivers.filter(d=>d.sub==='Al día').length;
+  const stLabel=d=>!d.approved?'Por aprobar':({off:'Desconectado',free:'Disponible',ring:'Recibiendo oferta',enroute:'En camino',trip:'En viaje',busy:'En viaje',done:'Disponible'}[d.status]);
+  main.innerHTML=`<div class="top"><div class="brand">Panel <span>administrador</span></div><p class="note" style="margin-top:4px">Cifras de esta sesión de demostración, más una reserva de ejemplo.</p></div>
+  <div class="body">
+    <div class="kpis">
+      <div class="kpi"><b>${S.trips.length}</b><span>Solicitudes inmediatas</span></div>
+      <div class="kpi"><b>${done}</b><span>Viajes completados</span></div>
+      <div class="kpi"><b>${pend}</b><span>Reservas sin conductor</span></div>
+      <div class="kpi"><b>${conf}</b><span>Reservas confirmadas</span></div>
+    </div>
+    <div class="sec"><h3>Conductores y suscripciones</h3>
+      <div class="scroll"><table><tr><th>Conductor</th><th>Estado</th><th>Suscripción</th><th class="num">Ofertas</th><th class="num">Viajes</th><th class="num">Multas</th><th></th></tr>
+      ${S.drivers.map(d=>`<tr><td><b>${esc(d.name)}</b><br><span class="note">${d.plate} · ${d.seats} asientos</span></td><td>${stLabel(d)}</td><td>${d.sub}</td><td class="num">${d.offers}</td><td class="num">${d.done}</td><td class="num">${d.fines||0}</td>
+        <td>${!d.approved?`<button class="mini" data-act="approve" data-id="${d.id}">Aprobar</button>`:d.sub==='Suspendida'||d.sub==='Vencida'?`<button class="mini" data-act="activate" data-id="${d.id}">Activar</button>`:`<button class="mini" data-act="suspend" data-id="${d.id}">Suspender</button>`}</td></tr>`).join('')}
+      </table></div>
+      <div class="field"><label for="a-plan">Mensualidad por taxista (CLP)</label><input type="number" id="a-plan" class="tin" style="width:140px!important" value="${S.plan}" step="5000" min="0"></div>
+      <p class="note">${active} al día × ${fmt(S.plan)} = <b>${fmt(active*S.plan)}</b> al mes. Sin comisión por viaje y sin garantía de cantidad de viajes.</p>
+    </div>
+    <div class="sec"><h3>Tarifas de referencia (editables)</h3>
+      <div class="scroll"><table><tr><th>Servicio</th><th class="num">Valor</th><th>Actualizado</th></tr>
+      ${S.tariffs.map(x=>`<tr><td>${esc(x.name)}${x.cond?`<br><span class="note">${esc(x.cond)}</span>`:''}</td><td class="num"><input type="number" class="tin" id="a-t-${x.id}" data-tar="${x.id}" value="${x.price}" step="500" min="0"></td><td class="note">${x.upd}</td></tr>`).join('')}
+      </table></div>
+      <p class="note">Referencias recogidas con taxistas locales: no son tarifas oficiales ni garantizadas.</p>
+      <p class="demo">Los sitios que exigen guía quedan guardados pero no se ofrecen al pasajero.</p>
+    </div>
+    <div class="sec"><h3>Reservas</h3>
+      ${S.res.map(r=>{const d=S.drivers.find(x=>x.id===r.drv);return `<div class="item"><div class="l1"><span>${esc(resWhen(r))} · ${esc(r.name)}</span>${pillFor(r.status,tes)}</div>
+        <div class="l2">${esc(resWhat(r))} · ${r.pax} pasajeros · ${fmt(r.price)} · ${PAY[r.pay]} · origen ${esc(r.source)}${d?' · '+esc(d.name):''}${r.urgent?' · <b>reasignación urgente</b>':''}${r.delayed?' · vuelo atrasado':''}${r.big?' · equipaje voluminoso (requiere van)':''}</div>
+        ${['Cancelada','Finalizada','Pasajero ausente'].includes(r.status)?'':`<div style="display:flex;gap:6px;flex-wrap:wrap">${['Pendiente de conductor','Sin disponibilidad'].includes(r.status)?`<button class="mini" data-act="assign" data-id="${r.id}">Asignar ahora a un taxista activo</button>`:''}${r.drv&&['Confirmada','Pendiente de reconfirmación'].includes(r.status)?`<button class="mini" data-act="absent" data-id="${r.id}">Simular: no tocó Iniciar a tiempo</button>`:''}<button class="mini" data-act="cancel" data-id="${r.id}">Cancelar reserva</button></div>`}</div>`}).join('')}
+    </div>
+    <div class="sec"><h3>Incidencias y avisos</h3>
+      ${S.log.length?S.log.slice(0,14).map(x=>`<div class="item"><div class="l1"><span>${esc(x.kind)}</span><span class="note">${x.at}</span></div><div class="l2">${esc(x.text)}</div></div>`).join(''):'<p class="note">Sin incidencias en esta sesión.</p>'}
+      <p class="note">En este prototipo los mensajes solo se anotan aquí. En la app real se envían solos y se guarda si llegaron.</p>
+      <div class="field"><label for="a-lead">Aviso al pasajero antes de la llegada (minutos)</label><input type="number" id="a-lead" class="tin" value="${S.lead}" min="5" max="60" step="5"></div>
+      <div class="field"><label for="a-grace">Minutos antes de la hora en que el taxista debe tocar Iniciar (si no, se reasigna con multa)</label><input type="number" id="a-grace" class="tin" value="${S.grace}" min="5" max="10" step="1"></div>
+    </div>
+    <div class="sec"><h3>De dónde llegan las solicitudes</h3>
+      ${Object.keys(src).length?`<table>${Object.entries(src).map(([k,n])=>`<tr><td>${esc(k)}</td><td class="num">${n}</td></tr>`).join('')}</table>`:'<p class="note">Sin solicitudes todavía.</p>'}
+      <p class="note">Visitas al sitio y conversión por canal se medirán cuando existan las páginas públicas (fase 4).</p>
+    </div>
+  </div>`;
+  main.querySelector('#a-plan').onchange=e=>{S.plan=Math.max(0,+e.target.value||0);renderA()};
+  main.querySelector('#a-lead').onchange=e=>{S.lead=Math.max(5,+e.target.value||15);renderA()};
+  main.querySelector('#a-grace').onchange=e=>{S.grace=Math.min(10,Math.max(5,+e.target.value||10));renderA()};
+  main.querySelectorAll('[data-tar]').forEach(i=>i.onchange=()=>{const x=S.tariffs.find(z=>z.id===i.dataset.tar);x.price=Math.max(0,+i.value||0);x.upd='Hoy (demostración)';renderA()});
+  main.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{const a=b.dataset.act,id=b.dataset.id;
+    if(a==='assign'){reassign(S.res.find(x=>x.id==id),false);return}
+    if(a==='absent'){reassign(S.res.find(x=>x.id==id),true);return}
+    if(a==='cancel'){cancelRes(S.res.find(x=>x.id==id),'el administrador');return}
+    else{const d=S.drivers.find(x=>x.id===id);
+      if(a==='approve'){d.approved=true;d.sub='En prueba'}
+      if(a==='activate')d.sub='Al día';
+      if(a==='suspend'){d.sub='Suspendida';if(d.id!=='me')d.status='off';else if(['free','off'].includes(d.status))d.status='off'}}
+    renderAll(true)});
+}
+
+function renderMain(force){
+  if(!force){
+    const formView=(S.main==='p'&&['now','reserve'].includes(S.pview))||(S.main==='h'&&S.hview!=='home');
+    const ae=document.activeElement;
+    if(formView||(ae&&main.contains(ae)&&/INPUT|SELECT/.test(ae.tagName)))return;
+  }
+  ({p:renderP,h:renderH,a:renderA})[S.main]();
+}
+
+/* ---------- TAXISTA ---------- */
+function tripCard(){
+  const f=S.trip;
+  return `<div class="tcard">
+    <div><div class="k">Recoger en</div><div class="from">${esc(f.from)}</div></div>
+    <div><div class="k">Va a</div><div class="to">${esc(f.to)}</div></div>
+    <div class="meta"><span class="pax">${PERSON}${f.pax}</span><span class="paybadge ${f.pay}">${PAY[f.pay].toUpperCase()}</span><span class="eta">a ${me.eta} min</span></div>
+  </div>`;
+}
+function conflict(r,id){return S.res.find(x=>x!==r&&x.drv===id&&['Confirmada','Pendiente de reconfirmación'].includes(x.status)&&x.date===r.date&&x.blocks.some(p=>r.blocks.some(q=>p[0]<q[1]&&q[0]<p[1])))}
+function renderD(){
+  const st=me.status, d=document.createElement('div');
+  const mine=S.res.filter(r=>r.drv==='me'&&['Confirmada','Pendiente de reconfirmación'].includes(r.status)).sort((x,y)=>(x.date+x.t1).localeCompare(y.date+y.t1));
+  const open=S.res.filter(r=>r.status==='Pendiente de conductor');
+  const agBtn=`<button class="d-btn agbtn" id="ag">Agenda${open.length?` · ${open.length} por tomar`:''}</button>`;
+  if(S.offline&&['off','free'].includes(st)){
+    d.className='d off';
+    d.innerHTML=`<div class="d-state">Sin conexión</div><div class="d-mid"><div class="huge">Sin señal</div><div class="sub">No recibes viajes hasta recuperar la conexión. La central te marca como no disponible.</div></div>`;
+  }else if(S.dview==='agenda'&&['off','free'].includes(st)){
+    d.className='d agenda';
+    const row=(r,take)=>`<div class="ag-item"><div class="when">${esc(resWhen(r))}</div><div class="what">${esc(resWhat(r))}</div>
+      <div class="more"><span>${r.pax} pasajeros</span><span>${fmt(r.price)}</span><span class="paybadge sm ${r.pay}">${PAY[r.pay].toUpperCase()}</span>${r.lei?'<span>Con collares</span>':''}${r.flight?`<span>Vuelo ${esc(r.flight)}</span>`:''}${r.delayed?'<span>Vuelo atrasado</span>':''}${r.urgent?'<span>Urgente</span>':''}${r.big?'<span>Equipaje voluminoso</span>':''}</div>
+      ${take?`<button class="take" data-take="${r.id}">Tomar</button>`:r.status==='Pendiente de reconfirmación'?`<button class="take" style="background:var(--ring);color:#111" data-reconf="${r.id}">Reconfirmar</button>`:`<button class="take" data-start="${r.id}">Iniciar</button>`}</div>`;
+    d.innerHTML=`<div class="d-state">Agenda <button class="d-small" id="agback">Volver</button></div>
+      <div class="ag-body"><div class="ag-h">Reservas por tomar</div>${open.length?open.map(r=>row(r,true)).join(''):'<div class="ag-empty">No hay reservas pendientes.</div>'}
+      <div class="ag-h">Mis reservas confirmadas</div>${mine.length?mine.map(r=>row(r,false)).join(''):'<div class="ag-empty">Sin reservas confirmadas.</div>'}
+      <div class="ag-empty">La agenda se revisa con el auto detenido.</div></div>`;
+    d.querySelector('#agback').onclick=()=>{S.dview='main';renderD()};
+    d.querySelectorAll('[data-take]').forEach(b=>b.onclick=()=>{
+      const r=S.res.find(x=>x.id==b.dataset.take);
+      if(!canWork(me))return toast(dphone,'Tu suscripción no está activa. Habla con el administrador.');
+      if(r.pax>me.seats)return toast(dphone,`Son ${r.pax} pasajeros y tu auto tiene ${me.seats} asientos.`);
+      if(r.big&&me.seats<6)return toast(dphone,'Equipaje voluminoso: esta reserva necesita un vehículo grande.');
+      const c=conflict(r,'me');
+      if(c)return toast(dphone,`No se puede: choca con tu reserva de ${c.t1}${c.t2?'–'+c.t2:''}.`);
+      r.status='Confirmada';r.drv='me';r.urgent=false;log('Reserva tomada',`${me.name} tomó ${resWhen(r)} de ${r.name}`);msg(r,`Reserva confirmada con ${me.name}, patente ${me.plate}.`);renderAll();toast(dphone,'Reserva confirmada. El pasajero ya ve tus datos.')});
+    d.querySelectorAll('[data-reconf]').forEach(b=>b.onclick=()=>{const r=S.res.find(x=>x.id==b.dataset.reconf);const c=conflict(r,'me');
+      if(c){reassign(r,false);return toast(dphone,'Chocaba con otra reserva tuya: pasó sola a otro taxista activo, sin multa.')}
+      r.status='Confirmada';log('Reconfirmación',`${me.name} reconfirmó ${resWhen(r)} de ${r.name}`);renderAll();toast(dphone,'Reconfirmada. El pasajero ya fue avisado.')});
+    d.querySelectorAll('[data-drop]').forEach(b=>b.onclick=()=>dropRes(S.res.find(x=>x.id==b.dataset.drop)));
+    d.querySelectorAll('[data-start]').forEach(b=>b.onclick=()=>startRes(S.res.find(x=>x.id==b.dataset.start)));
+  }else if(st==='off'){
+    d.className='d off';
+    d.innerHTML=`<div class="d-state">Desconectado</div>
+      <div class="d-mid"><div class="huge">No recibes viajes</div><div class="sub">${canWork(me)?'Conéctate cuando estés listo para trabajar.':'Suscripción suspendida: habla con el administrador.'}</div></div>
+      ${agBtn}<button class="d-btn connect" id="con">Conectarme</button>`;
+    d.querySelector('#con').onclick=()=>{if(!canWork(me))return toast(dphone,'Tu suscripción no está activa.');me.status='free';keepAwake();renderAll()};
+  }else if(st==='free'){
+    d.className='d free';const n=mine[0];
+    d.innerHTML=`<div class="d-state">Disponible <button class="d-small" id="disc">Desconectarme</button></div>
+      <div class="d-mid"><div class="huge">Esperando viajes</div><div class="sub">Juan Pérez (ejemplo)</div>
+      ${n?`<div class="nextres">Próxima reserva<b>${esc(resWhen(n))} · ${n.type==='airport'?'Aeropuerto':n.type==='sunrise'?'Amanecer Tongariki':'Anakena'}</b></div>`:''}</div>${agBtn}`;
+    d.querySelector('#disc').onclick=()=>{me.status='off';renderAll()};
+  }else if(st==='ring'){
+    d.className='d ring';
+    d.innerHTML=`<button class="d-btn reject" id="rej">Rechazar</button>${tripCard()}<div style="flex:1"></div>
+      <button class="d-btn accept" id="acc">Aceptar <span class="count" id="cnt">${S.secs}</span></button>`;
+    d.querySelector('#rej').onclick=()=>declined('Rechazaste el viaje. Pasó a otro taxista, sin penalización.');
+    d.querySelector('#acc').onclick=accept;
+  }else if(st==='enroute'||st==='trip'){
+    d.className='d '+st;
+    d.innerHTML=`<div class="d-state">${st==='enroute'?'En camino':'En viaje'} · ${esc(S.trip.name)}</div>${tripCard()}<div style="flex:1"></div>
+      <div class="trip-actions"><button id="dwa">WhatsApp</button><button id="dcall">Llamar</button></div>
+      <button class="d-btn donebtn" id="next">${st==='enroute'?'Llegué':'Terminé'}</button>`;
+    const m='Demostración: en la app real abre WhatsApp o llama al pasajero.';
+    d.querySelector('#dwa').onclick=()=>toast(dphone,m);d.querySelector('#dcall').onclick=()=>toast(dphone,m);
+    d.querySelector('#next').onclick=()=>{
+      if(st==='enroute'){me.status='meet';setRes(S.trip,'Conductor en punto de encuentro')}
+      else{me.status='done';me.done++;S.trip.status='Finalizado';setRes(S.trip,'Finalizada');setTimeout(()=>{if(me.status==='done'){me.status='free';renderAll()}},2500)}
+      renderAll()};
+  const cb=d.querySelector('#cant');if(cb)cb.onclick=driverCancels;
+  }else if(st==='meet'){
+    d.className='d trip';
+    d.innerHTML=`<button class="d-btn reject" id="noshow">No llegó</button>${tripCard()}<div style="flex:1"></div>
+      <div class="trip-actions"><button id="dwa">WhatsApp</button><button id="dcall">Llamar</button></div>
+      <button class="d-btn accept" id="aboard" style="font-size:38px">Pasajero a bordo</button>`;
+    const m='Demostración: en la app real abre WhatsApp o llama al pasajero.';
+    d.querySelector('#dwa').onclick=()=>toast(dphone,m);d.querySelector('#dcall').onclick=()=>toast(dphone,m);
+    d.querySelector('#aboard').onclick=()=>{me.status='trip';S.trip.status='En viaje';setRes(S.trip,'En viaje');renderAll()};
+    d.querySelector('#noshow').onclick=noShow;
+  }else if(st==='done'){
+    d.className='d done';
+    d.innerHTML=`<div class="d-state">Viaje terminado</div><div class="d-mid"><div class="huge">Listo</div><div class="sub">Vuelves a quedar disponible.</div></div>`;
+  }
+  if(S.dview==='agenda'&&!['off','free'].includes(st))S.dview='main';
+  dphone.replaceChildren(d);
+  const ag=d.querySelector('#ag');if(ag)ag.onclick=()=>{S.dview='agenda';renderD()};
+}
+function renderAll(force){renderMain(force);renderD()}
+
+/* ---------- asignación por olas (simulada) ---------- */
+function requestTrip(data,source){
+  if(activeTrip()){toast(main,tes('busy'));return null}
+  const t=Object.assign({id:S.trips.length+1,source,status:'Buscando',wave:1,drv:null},data);
+  S.trips.push(t);S.trip=t;
+  if(me.status==='free'&&canWork(me)&&me.seats>=t.pax&&!S.offline){
+    setTimeout(()=>{
+      if(t.status!=='Buscando')return;if(me.status!=='free'||S.offline){otherAccepts(t);return}
+      me.status='ring';me.offers++;S.dview='main';S.secs=20;renderD();startAlert();
+      if(narrow()){S.tab='d';applyTabs()}
+      S.timer=setInterval(()=>{S.secs--;const c=document.getElementById('cnt');if(c)c.textContent=S.secs;
+        if(S.secs<=0)declined('Pasaron 20 segundos. El viaje pasó a otro taxista, sin penalización.')},1000);
+    },1200);
+  }else otherAccepts(t);
+  return t;
+}
+function accept(){
+  clearInterval(S.timer);stopAlert();
+  me.status='enroute';S.trip.drv=me;S.trip.status='Asignado';msg(S.trip,`${me.name} aceptó tu viaje, patente ${me.plate}. Llega en unos ${me.eta} minutos.`);renderAll();
+  toast(dphone,'Aceptado. El pasajero ya ve tus datos.');
+}
+function declined(msg){
+  clearInterval(S.timer);stopAlert();me.status='free';S.trip.wave=2;renderAll();toast(dphone,msg);otherAccepts(S.trip);
+}
+function passengerCancels(t){t.status='Cancelado';log('Cancelación del pasajero',`${t.name} canceló su viaje a ${t.to}`);
+  if(S.trip===t){clearInterval(S.timer);stopAlert();
+    if(['ring','enroute','meet'].includes(me.status)){me.status='free';toast(dphone,'El pasajero canceló el viaje.')}
+    else if(t.drv&&t.drv!==me)t.drv.status='free'}
+  renderAll(true)}
+function driverCancels(){const t=S.trip;me.status='free';t.drv=null;log('Cancelación del taxista',`${me.name} no pudo ir por ${t.name}. Reasignación urgente.`);
+  if(t.res){t.res.drv=null;t.res.status='Pendiente de conductor';t.res.urgent=true;t.status='Cancelado';renderAll(true);toast(dphone,'Reserva liberada. Se avisó al pasajero.');return}
+  t.status='Buscando';t.wave=2;t.again=true;renderAll(true);toast(dphone,'Viaje liberado. Se busca otro taxista.');otherAccepts(t)}
+function noShow(){const t=S.trip;t.status='Pasajero ausente';setRes(t,'Pasajero ausente');me.status='free';log('Pasajero ausente',`${t.name} no llegó al punto de encuentro (${t.from})`);renderAll(true);toast(dphone,'Registrado: pasajero ausente. Vuelves a quedar disponible.')}
+function dropRes(r){r.drv=null;r.status='Pendiente de conductor';r.urgent=true;log('Cancelación del taxista',`${me.name} soltó ${resWhen(r)} de ${r.name}. Reasignación urgente.`);log('Aviso','Se avisó al pasajero y a los demás taxistas (simulado)');renderAll(true);toast(dphone,'Reserva liberada. Se avisó al pasajero.')}
+function startRes(r){if(activeTrip())return toast(dphone,'Termina primero el viaje en curso.');
+  if(!canWork(me))return toast(dphone,'Tu suscripción no está activa.');
+  const from=r.type==='airport'?'Aeropuerto Mataveri':r.start,to=r.type==='airport'?r.lodging:r.type==='anakena'?'Anakena':'Tongariki (amanecer)';
+  S.trip={id:0,source:r.source,status:'Asignado',wave:1,drv:me,from,to,pax:r.pax,pay:r.pay,name:r.name,wa:r.wa,res:r};
+  me.status='enroute';S.dview='main';setRes(S.trip,'En camino');keepAwake();msg(r,`Tu taxi va en camino y llega en unos ${S.lead} minutos.`);renderAll(true)}
+function otherAccepts(t){
+  const o=S.drivers.filter(d=>d.id!=='me'&&canWork(d)&&d.status==='free'&&d.seats>=t.pax).sort((x,y)=>x.offers-y.offers)[0];
+  setTimeout(()=>{
+    if(t.status!=='Buscando')return;
+    if(!o){t.status='Sin disponibilidad';log('Sin disponibilidad',`Nadie pudo tomar el viaje de ${t.name}`);renderAll();return}
+    o.offers++;o.status='busy';t.drv=o;t.status='Asignado';renderAll();
+    if(narrow()&&S.tab==='d'){S.tab=S.main;applyTabs()}
+    setTimeout(()=>{if(t.status==='Asignado'&&t.drv===o){t.status='En viaje';renderAll()}},5000);
+    setTimeout(()=>{if(t.status==='En viaje'&&t.drv===o){t.status='Finalizado';o.status='free';o.done++;renderAll()}},10000);
+  },3000);
+}
+document.getElementById('off').onchange=e=>{S.offline=e.target.checked;
+  if(S.offline){log('Falla de conexión',`${me.name} quedó sin señal`);if(me.status==='ring'){declined('Sin conexión: el viaje pasó a otro taxista.');return}}
+  renderAll(true)};
+applyTabs();renderAll(true);
+})();
+</script>
+
+</body>
+</html>

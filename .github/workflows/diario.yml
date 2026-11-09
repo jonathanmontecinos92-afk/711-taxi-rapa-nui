@@ -1,0 +1,29 @@
+name: Revisión diaria
+# Pruebas completas con datos ficticios y revisión de vulnerabilidades conocidas.
+on:
+  schedule:
+    - cron: "15 12 * * *"   # 12:15 UTC, madrugada en Rapa Nui
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diario:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Pruebas sobre el código del repositorio
+        run: npm test
+      - name: Pruebas sobre el sitio publicado
+        if: ${{ vars.SITE_URL != '' }}
+        env:
+          BASE_URL: ${{ vars.SITE_URL }}
+        run: npm test
+      - name: Vulnerabilidades conocidas en dependencias
+        run: npm audit --audit-level=high

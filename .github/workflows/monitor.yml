@@ -1,0 +1,33 @@
+name: Disponibilidad
+# Comprueba que la app publicada responda. Requiere la variable de repositorio SITE_URL.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+jobs:
+  disponibilidad:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      SITE_URL: ${{ vars.SITE_URL }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Comprobar respuesta
+        run: |
+          if [ -z "$SITE_URL" ]; then echo "::notice::SITE_URL no está configurada; no hay nada que comprobar todavía."; exit 0; fi
+          code=$(curl -s -o /tmp/body -w '%{http_code}' --max-time 20 "$SITE_URL" || echo 000)
+          echo "Respuesta HTTP: $code"
+          [ "$code" = "200" ] || { echo "::error::La app respondió $code"; exit 1; }
+          grep -q "711" /tmp/body || { echo "::error::La página respondió, pero sin el contenido esperado"; exit 1; }
+      - name: Abrir incidencia si falla
+        if: failure()
+        run: |
+          gh label create caida --repo "$GITHUB_REPOSITORY" --color B60205 --description "La app no responde" --force
+          abiertas=$(gh issue list --repo "$GITHUB_REPOSITORY" --label caida --state open --json number --jq 'length')
+          if [ "$abiertas" = "0" ]; then
+            gh issue create --repo "$GITHUB_REPOSITORY" --label caida --title "La app no responde" \
+              --body "La comprobación automática falló. Revisa la ejecución: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          fi

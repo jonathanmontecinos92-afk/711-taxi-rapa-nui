@@ -1,5 +1,10 @@
 # Historial de cambios
 
+## Rama feat/colores-conductor (sin publicar, espera aprobación)
+
+- La pantalla del conductor deja el verde, amarillo y rojo tipo semáforo y usa los colores de la marca: azul oscuro en espera, amarillo taxi solo para la alerta de pedido nuevo y azul durante el viaje.
+- Aceptar es el botón grande azul noche; Rechazar es un botón de contorno. Se distinguen por tamaño, posición y texto, no por color.
+
 ## Rama fix/auditoria-1 (sin publicar, espera aprobación)
 
 Correcciones de la auditoría técnica 1. Las 25 pruebas pasan.

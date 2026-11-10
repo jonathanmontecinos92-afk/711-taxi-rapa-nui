@@ -200,6 +200,20 @@ select,input[type=text],input[type=tel],input[type=date],input[type=time],input[
 .pnav{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-radius:99px;padding:4px;box-shadow:0 2px 8px rgba(8,27,58,.3)}
 .pnav button{border:0;background:none;color:var(--night);font:700 11px var(--body);display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 2px;border-radius:99px;cursor:pointer;min-width:0}
 .pnav button[aria-current="page"]{background:var(--taxi)}
+/* ---------- Pantalla del conductor con los colores de la marca ---------- */
+.d.off{background:#3a4658}.d.free{background:#062A60}.d.done{background:#062A60}.d.agenda{background:#081B3A}
+.d.enroute{background:#063B83}.d.trip{background:#1463C4}
+.d.ring{background:#FFD000;color:#081B3A;animation:flash 1s steps(2) infinite}
+@keyframes flash{50%{background:#FFE98A}}
+.tcard{background:#081B3A}
+.connect{background:#FFD000;color:#081B3A}
+.accept{background:#081B3A;color:#fff}
+.reject{background:transparent;color:#081B3A;border:3px solid #081B3A;margin:14px 14px 0;width:auto;border-radius:18px;padding:14px 0;font-size:28px}
+.d.trip .reject{color:#fff;border-color:#fff}
+.d.trip .accept{background:#FFD000;color:#081B3A}
+.take{background:#FFD000;color:#081B3A}
+.count{background:rgba(255,255,255,.2)}
+.agbtn{background:rgba(255,255,255,.14)}
 </style>
 
 </head>

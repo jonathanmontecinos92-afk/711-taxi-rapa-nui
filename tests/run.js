@@ -216,6 +216,49 @@ test('Hotel: plan Gratis solo ve; plan Pro puede cambiar o cancelar', async p =>
   assert(await p.isVisible('[data-hm]'), 'el plan Pro no permite gestionar');
 });
 
+// --- envíos de productos (alianza Tari Kai) ---
+async function pedirEnvio(p, { moto = true } = {}) {
+  await p.click('#p-env');
+  await p.fill('#e-from', 'Restaurante Ficticio'); await p.fill('#e-to', 'Hostal Ficticio'); await p.fill('#e-item', '2 cajas de comida');
+  if (!moto) await p.click('[data-size="auto"]');
+  await submit(p, '#e-form');
+}
+
+test('Envío completo: pedir, aceptar, retirar, entregar', async p => {
+  await pedirEnvio(p); await W(1700);
+  assert((await text(p, '#dphone')).includes('ENVÍO'), 'la tarjeta del conductor no dice ENVÍO');
+  assert((await text(p, '#dphone')).includes('Restaurante Ficticio'), 'no muestra dónde retirar');
+  await p.click('#acc'); await W(150);
+  await p.click('#next'); await W(100);
+  assert((await text(p, '#aboard')).includes('Tengo el pedido'), 'falta el paso de retiro');
+  await p.click('#aboard'); await W(100); await p.click('#next'); await W(150);
+  assert((await text(p, '#main')).includes('Pedido entregado'), 'el cliente no ve la entrega');
+});
+
+test('Envío que cabe en moto: si el taxista rechaza, pasa a la flota aliada', async p => {
+  await pedirEnvio(p); await W(1700);
+  await p.click('#rej'); await W(3600);
+  assert((await text(p, '#main')).includes('MOTO-0'), 'no se asignó a una moto de la flota aliada');
+});
+
+test('Envío que necesita auto nunca se asigna a una moto', async p => {
+  await pedirEnvio(p, { moto: false }); await W(1700);
+  await p.click('#rej'); await W(3600);
+  const t = await text(p, '#main');
+  assert(!t.includes('MOTO-0') && (t.includes('WXYZ-34') || t.includes('EFGH-56')), 'se asignó mal');
+});
+
+test('Envío exige retiro, entrega y descripción', async p => {
+  await p.click('#p-env'); await submit(p, '#e-form');
+  assert(await p.isVisible('#e-err'), 'aceptó un envío vacío');
+});
+
+test('Pedido entrante de Tari Kai llega al conductor y queda registrado con su origen', async p => {
+  await p.click('#tab-a'); await p.click('#a-tk'); await W(1700);
+  assert(await p.isVisible('#acc'), 'el pedido no llegó al conductor');
+  assert((await text(p, '#main')).includes('Tari Kai'), 'no quedó registrado el origen Tari Kai');
+});
+
 // --- zona horaria ---
 test('Fechas usan la hora de Rapa Nui aunque el teléfono esté en otra zona (Tokio)', async p => {
   await abrirReserva(p, 'airport');

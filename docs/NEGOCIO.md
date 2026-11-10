@@ -30,7 +30,20 @@ No son tarifas oficiales. El administrador puede editarlas.
 - Hoteles: plan Gratis solo ve el estado de sus reservas. Plan Pro (precio por definir) suma estadísticas, cambio y cancelación de reservas y prioridad.
 - Avisos al pasajero: por notificación del teléfono, sin pedir correo ni cuenta.
 
+## Envíos de productos y alianza Tari Kai
+
+Idea registrada el 2026-11-10 tras una reunión con Tari Kai. Aún no hay acuerdo firmado.
+
+- Tari Kai (tarikai.vicercom.com, desarrollada por Vicercom) es una app de delivery y market local: restaurantes, tiendas, encomiendas y favores, con pago por Webpay o al recibir, retiro en local o reparto, y recargos por horario y por lluvia.
+- En 711, Tari Kai entra como flota aliada de motos. Un envío es un pedido igual que un viaje, pero con un paquete en vez de un pasajero.
+- Un pasajero nunca se asigna a una moto. Un envío que no cabe en moto solo va a autos.
+- Si el envío cabe en moto y el taxista lo rechaza o no responde, pasa primero a las motos aliadas.
+- La tarifa de envío no está definida. La app muestra "Por definir" hasta que el administrador la fije.
+- Tari Kai publica un catálogo de solo lectura para otros sistemas. Sirve para mostrar productos, no para crear pedidos ni cobrar.
+
 ## Pendiente de definir
+
+- Con Tari Kai: tarifa de reparto, quién cobra al cliente, cómo llegan los pedidos a 711 y cómo se reparte el ingreso.
 
 - Minutos de espera antes de marcar "No llegó".
 - Si el taxista reasignado debe aceptar o queda asignado directo.

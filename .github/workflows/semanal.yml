@@ -1,5 +1,5 @@
 name: Revisión semanal
-# Velocidad y accesibilidad en móvil con Lighthouse. Requiere SITE_URL.
+# Velocidad y accesibilidad en móvil con Lighthouse.
 on:
   schedule:
     - cron: "30 13 * * 1"
@@ -10,13 +10,12 @@ jobs:
   lighthouse:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: ${{ vars.SITE_URL != '' }}
     steps:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Lighthouse móvil
-        run: npx --yes lighthouse "${{ vars.SITE_URL }}" --only-categories=performance,accessibility,best-practices --output=html --output=json --output-path=./informe --chrome-flags="--headless=new --no-sandbox"
+        run: npx --yes lighthouse "${{ vars.SITE_URL || 'https://711-taxi-rapa-nui.netlify.app' }}" --only-categories=performance,accessibility,best-practices --output=html --output=json --output-path=./informe --chrome-flags="--headless=new --no-sandbox"
       - uses: actions/upload-artifact@v4
         with:
           name: lighthouse
